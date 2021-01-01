@@ -188,7 +188,7 @@ Below is a (quick and dirty) wiring diagram with the Controllino MAXI. Right cli
 <p>
 See NodeRed folder for more info and code
 <p align="center"> <img src="/docs/Blynk2.jpg" width="302" title="Blynk"> </p> <br />
-<p align="center"> <img src="/NodeRed/NodeRed-to-Blynk.jpg" width="702" title="Blynk"> </p> <br />
+<p align="center"> <img src="/docs/NodeRed-to-Blynk.jpg" width="702" title="Blynk"> </p> <br />
 </p>
 
 <h4>Non-cloud home automation integration example (Node-Red + InfluxDB + Grafana)</h4>
