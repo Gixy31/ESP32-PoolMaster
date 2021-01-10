@@ -11,6 +11,9 @@
 #include "Nextion.h"
 
 String temp;
+bool TFT_ON = true;
+// Last action time done on TFT. Go to sleep after TFT_SLEEP
+unsigned long LastAction = 0;
 
 void InitTFT(void);
 void ResetTFT(void);
@@ -27,6 +30,7 @@ void InitTFT()
 void ResetTFT()
 {
   myNex.writeStr(F("rest"));
+  LastAction = millis();
 }
 
 void UpdateWiFi(bool wifi){
@@ -395,6 +399,14 @@ void UpdateTFT()
         break;
       }
   }
+  //put TFT in sleep mode with wake up on touch and force page 0 load to trigger an event
+  if(millis() - LastAction >= TFT_SLEEP && TFT_ON)
+  {
+    myNex.writeStr("thup=1");
+    myNex.writeStr("wup=0");
+    myNex.writeStr("sleep=1");
+    TFT_ON = false;
+  }
 }
 
 //Page 0 has finished loading
@@ -403,6 +415,27 @@ void trigger1()
 {
   CurrentPage = 0;
   DEBUG_PRINT(F("Nextion p0"));
+  if(!TFT_ON)
+  {
+    TFTStruc =
+    { //default values to force update on next refresh
+      -1., -1., -1., -1., -1., -1., -1., -1.,
+      0, 0, 0, 0,
+      0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+      99, 99,
+      ""
+    };
+    // force update of relays states as we can't manage that with a third state in default values
+    TFTStruc.R0 = digitalRead(RELAY_R0);
+    myNex.writeNum(F("page1.vabR0.val"), !TFTStruc.R0);
+    TFTStruc.R1 = digitalRead(RELAY_R1);
+    myNex.writeNum(F("page1.vabR1.val"), !TFTStruc.R1);
+    TFTStruc.R2 = digitalRead(RELAY_R2);
+    myNex.writeNum(F("page1.vabR2.val"), !TFTStruc.R2);
+    UpdateWiFi(WiFi.status() == WL_CONNECTED);
+    TFT_ON = true;  
+  }
+  LastAction = millis();
 }
 
 //Page 1 has finished loading
@@ -411,6 +444,7 @@ void trigger2()
 {
   CurrentPage = 1;
   DEBUG_PRINT(F("Nextion p1"));
+  LastAction = millis();
 }
 
 //Page 2 has finished loading
@@ -419,6 +453,7 @@ void trigger3()
 {
   CurrentPage = 2;
   DEBUG_PRINT(F("Nextion p2"));
+  LastAction = millis();  
 }
 
 //Page 3 has finished loading
@@ -427,6 +462,7 @@ void trigger4()
 {
   CurrentPage = 3;
   DEBUG_PRINT(F("Nextion p3"));
+  LastAction = millis();
 }
 
 //MODE button was toggled
@@ -448,6 +484,7 @@ void trigger5()
     queueIn.enqueue(Cmd);
     DEBUG_PRINT(Cmd);
   }
+  LastAction = millis();
 }
 
 //FILT button was toggled
@@ -469,6 +506,7 @@ void trigger6()
     queueIn.enqueue(Cmd);
     DEBUG_PRINT(Cmd);
   }
+  LastAction = millis();
 }
 
 //Robot button was toggled
@@ -490,6 +528,7 @@ void trigger7()
     queueIn.enqueue(Cmd);
     DEBUG_PRINT(Cmd);
   }
+  LastAction = millis();
 }
 
 //Relay 0 button was toggled
@@ -511,6 +550,7 @@ void trigger8()
     queueIn.enqueue(Cmd);
     DEBUG_PRINT(Cmd);
   }
+  LastAction = millis();
 }
 
 //Relay 1 button was toggled
@@ -532,6 +572,7 @@ void trigger9()
     queueIn.enqueue(Cmd);
     DEBUG_PRINT(Cmd);
   }
+  LastAction = millis();
 }
 
 //Relay 2 button was toggled
@@ -553,6 +594,7 @@ void trigger10()
     queueIn.enqueue(Cmd);
     DEBUG_PRINT(Cmd);
   }
+  LastAction = millis();
 }
 
 //Probe calibration completed or new pH, Orp or Water Temp setpoints or New tank
@@ -563,6 +605,7 @@ void trigger11()
   String Cmd = myNex.readStr(F("pageCalibs.vaCommand.txt"));
   queueIn.enqueue(Cmd);
   DEBUG_PRINT(Cmd);
+  LastAction = millis();
 }
 
 //Clear Errors button pressed
@@ -572,4 +615,5 @@ void trigger12()
   DEBUG_PRINT(F("Clear errors event"));
   String Cmd = F("{\"Clear\":1}");
   queueIn.enqueue(Cmd);
+  LastAction = millis();
 }
