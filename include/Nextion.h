@@ -20,10 +20,10 @@ struct TFTStruct
   unsigned long pHPpRT, OrpPpRT;
   String FW;
 } TFTStruc =
-{ //default values.
-  7.30, 730, 7.4, 740, 27.11, 28.5, 25.5, 0.80,
-  8, 20, 100, 100,
-  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+{ //default values to force update on next refresh
+  -1., -1., -1., -1., -1., -1., -1., -1.,
+  0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   99, 99,
   ""
 };

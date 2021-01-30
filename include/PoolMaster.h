@@ -1,7 +1,9 @@
 #pragma once
+#define ARDUINOJSON_USE_DOUBLE 1  // Required to force ArduinoJSON to treat float as double
+//#define DEBUG                   // Comment this line to deactivate some code dedicated to debug
+#define DEBUG_LEVEL DBG_DEBUG     // Possible levels : NONE/ERROR/WARNING/INFO/DEBUG/VERBOSE
 
-//#define DEBUG           ->comment this line to prevent code from writing debug messages to serial port
-#include "DebugUtils.h"
+#include "Arduino_DebugUtils.h"
 
 #include <time.h>                 // Struct and function declarations for dealing with time
 #include "TimeLib.h"              // Low level time and date functions
