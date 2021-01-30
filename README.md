@@ -14,7 +14,7 @@ Compared to the initial project, the main differences are:
   <li> and more...
 </ul>  <br />
   The project isn't a fork of the original one due to the different structure of source files with PlatformIO ((.cpp, .h).
-  A dedicated board has been designed to host all components:</p><br /><br />
+  A dedicated board has been designed to host all components. There are 8 LEDs at the bottom to display status, warnings and alarms.</p><br /><br />
   
 <p align="center"> <img src="/docs/PoolMaster_board.JPG" width="802" title="Board"> </p> <br /><br />  
 
