@@ -16,7 +16,7 @@ Compared to the initial project, the main differences are:
   The project isn't a fork of the original one due to the different structure of source files with PlatformIO ((.cpp, .h).
   A dedicated board has been designed to host all components:</p><br /><br />
   
-<p align="center"> <img src="/docs/PoolMaster board.jpg" width="802" title="Board"> </p> <br /><br />  
+<p align="center"> <img src="/docs/PoolMaster_board.jpg" width="802" title="Board"> </p> <br /><br />  
 
 
 <h2>PoolMaster 5.0.0</h2>
