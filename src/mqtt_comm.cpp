@@ -66,12 +66,11 @@ void mqttInit() {
 void mqttErrorPublish(const char* Payload){
   if (mqttClient.publish(PoolTopicError, 1, true, Payload) !=0)
   {
-    Serial << F("Payload: ") << Payload << F(" - ");
-    Serial << F("Payload size: ") << sizeof(Payload) << _endl;
+    Debug.print(DBG_WARNING,"Payload: %s - Payload size: %d",Payload, sizeof(Payload));
   }
   else
   {
-    Serial << F("Unable to publish the following payload: ") << Payload << _endl;
+    Debug.print(DBG_WARNING,"Unable to publish the following payload: %s",Payload);
   }
 }    
 
@@ -82,6 +81,7 @@ void connectToMqtt(){
 void WiFiEvent(WiFiEvent_t event){
   switch(event){
     case SYSTEM_EVENT_STA_GOT_IP:
+      Debug.print(DBG_INFO,"WiFi connected, connecting to MQTT");
       UpdateWiFi(true);
       connectToMqtt();
       break;
@@ -124,34 +124,28 @@ void EncodeBitMap()
 // then publish the "online" message on the "status" topic. If Ethernet connection is ever lost
 // "status" will switch to "offline". Very useful to check that the Arduino is alive and functional
 void onMqttConnect(bool sessionPresent){
-  Serial.println("Connected to MQTT");
-  Serial.print("Session present: ");
-  Serial.println(sessionPresent);
-  //uint16_t packetIdSub = 
+  Debug.print(DBG_INFO,"Connected to MQTT, present session: %d",sessionPresent);
   mqttClient.subscribe(PoolTopicAPI,2);
-  //uint16_t packetIdPub =
   mqttClient.publish(PoolTopicStatus,1,true,"Online");
   MQTTConnection = true;
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason){
-  Serial.println("Disconnected from MQTT");
+  Debug.print(DBG_INFO,"Disconnected from MQTT");
   if(WiFi.isConnected()) xTimerStart(mqttReconnectTimer,0);
   MQTTConnection = false;
 }
 
 void onMqttSubscribe(uint16_t packetId, uint8_t qos){
-    Serial.print("Subscribe ack., qos: ");
-    Serial.println(qos);
+    Debug.print(DBG_INFO,"Subscribe ack., qos: %d",qos);
 }
 
 void onMqttUnSubscribe(uint16_t packetId){
-    Serial.println("unSubscribe ack.");
+    Debug.print(DBG_INFO,"unSubscribe ack.");
 }
 
 void onMqttPublish(uint16_t packetId){
-    Serial.print("Publish ack., packetId: ");
-    Serial.println(packetId);
+    Debug.print(DBG_INFO,"Publish ack., packetId: %d",packetId);
 }
 
 // MQTT callback
@@ -164,13 +158,13 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
   {
     if (queueIn.enqueue(payload))
     {
-      Serial << F("Added command to queue: ") << payload << _endl;
+      Debug.print(DBG_INFO,"Added command to queue: %s",payload);
     }
     else
     {
-      Serial << F("Could not add command to queue, queue is full") << _endl;
+      Debug.print(DBG_ERROR,"Could not add command to queue, queue is full");
     }
-    Serial << F("FreeRam: ") << freeRam() << F(" - Qeued messages: ") << queueIn.itemCount() << _endl;
+    Debug.print(DBG_VERBOSE,"FreeRam: %d Queued messages: %d",freeRam(),queueIn.itemCount());
   }
 }
 
@@ -198,22 +192,20 @@ void PublishSettings()
       serializeJson(root,Payload,sizeof(Payload));
       if (mqttClient.publish(PoolTopicSet1, 1, true, Payload) !=0)
       {
-        Serial << F("Payload: ") << Payload << F(" - ");
-        Serial << F("Payload size: ") << root.size() << _endl;
+        Debug.print(DBG_DEBUG,"Payload: %s - Payload size: %d",Payload,root.size());
       }
       else
       {
-        Serial << F("Unable to publish the following payload: ") << Payload << _endl;
+        Debug.print(DBG_DEBUG,"Unable to publish the following payload: %s",Payload);
       }
     }
     else
     {
-      Serial << F("MQTT Payload buffer overflow! - ");
-      Serial << F("Payload size: ") << root.size() << _endl;
+      Debug.print(DBG_ERROR,"MQTT Payload buffer overflow! - Payload size: %d",root.size());
     }
   }
   else
-    Serial << F("Failed to connect to the MQTT broker") << _endl;
+    Debug.print(DBG_ERROR,"Failed to connect to the MQTT broker");
 
   if (mqttClient.connected())
   {
@@ -235,22 +227,20 @@ void PublishSettings()
       serializeJson(root,Payload,sizeof(Payload));
       if (mqttClient.publish(PoolTopicSet2, 1, true, Payload) != 0)
       {
-        Serial << F("Payload: ") << Payload << F(" - ");
-        Serial << F("Payload size: ") << root.size() << _endl;
+        Debug.print(DBG_DEBUG,"Payload: %s - Payload size: %d",Payload,root.size());
       }
       else
       {
-        Serial << F("Unable to publish the following payload: ") << Payload << _endl;
+        Debug.print(DBG_DEBUG,"Unable to publish the following payload: %s",Payload);
       }
     }
     else
     {
-      Serial << F("MQTT Payload buffer overflow! - ");
-      Serial << F("Payload size: ") << root.size() << _endl;
+      Debug.print(DBG_ERROR,"MQTT Payload buffer overflow! - Payload size: %d",root.size());
     }
   }
   else
-    Serial << F("Failed to connect to the MQTT broker") << _endl;
+    Debug.print(DBG_ERROR,"Failed to connect to the MQTT broker");
 
   if (mqttClient.connected())
   {
@@ -271,22 +261,20 @@ void PublishSettings()
       serializeJson(root,Payload,sizeof(Payload));
       if (mqttClient.publish(PoolTopicSet3, 1, true, Payload) != 0)
       {
-        Serial << F("Payload: ") << Payload << F(" - ");
-        Serial << F("Payload size: ") << root.size() << _endl;
+        Debug.print(DBG_DEBUG,"Payload: %s - Payload size: %d",Payload,root.size());
       }
       else
       {
-        Serial << F("Unable to publish the following payload: ") << Payload << _endl;
+        Debug.print(DBG_DEBUG,"Unable to publish the following payload: %s",Payload);
       }
     }
     else
     {
-      Serial << F("MQTT Payload buffer overflow! - ");
-      Serial << F("Payload size: ") << root.size() << _endl;
+      Debug.print(DBG_ERROR,"MQTT Payload buffer overflow! - Payload size: %d",root.size());
     }
   }
   else
-    Serial << F("Failed to connect to the MQTT broker") << _endl;
+    Debug.print(DBG_ERROR,"Failed to connect to the MQTT broker");
 
   if (mqttClient.connected())
   {
@@ -307,22 +295,20 @@ void PublishSettings()
       serializeJson(root,Payload,sizeof(Payload));
       if (mqttClient.publish(PoolTopicSet4, 1, true, Payload) != 0)
       {
-        Serial << F("Payload: ") << Payload << F(" - ");
-        Serial << F("Payload size: ") << root.size() << _endl;
+        Debug.print(DBG_DEBUG,"Payload: %s - Payload size: %d",Payload,root.size());
       }
       else
       {
-        Serial << F("Unable to publish the following payload: ") << Payload << _endl;
+        Debug.print(DBG_DEBUG,"Unable to publish the following payload: %s",Payload);
       }
     }
     else
     {
-      Serial << F("MQTT Payload buffer overflow! - ");
-      Serial << F("Payload size: ") << root.size() << _endl;
+      Debug.print(DBG_ERROR,"MQTT Payload buffer overflow! - Payload size: %d",root.size());
     }
   }
   else
-    Serial << F("Failed to connect to the MQTT broker") << _endl;
+    Debug.print(DBG_ERROR,"Failed to connect to the MQTT broker");
 
   if (mqttClient.connected())
   {
@@ -340,25 +326,23 @@ void PublishSettings()
       serializeJson(root,Payload,sizeof(Payload));
       if (mqttClient.publish(PoolTopicSet5, 1, true, Payload) != 0)
       {
-        Serial << F("Payload: ") << Payload << F(" - ");
-        Serial << F("Payload size: ") << root.size() << _endl;
+        Debug.print(DBG_DEBUG,"Payload: %s - Payload size: %d",Payload,root.size());
       }
       else
       {
-        Serial << F("Unable to publish the following payload: ") << Payload << _endl;
+        Debug.print(DBG_DEBUG,"Unable to publish the following payload: %s",Payload);
       }
     }
     else
     {
-      Serial << F("MQTT Payload buffer overflow! - ");
-      Serial << F("Payload size: ") << root.size() << _endl;
+      Debug.print(DBG_ERROR,"MQTT Payload buffer overflow! - Payload size: %d",root.size());
     }
   }
   else
-    Serial << F("Failed to connect to the MQTT broker") << _endl;
+    Debug.print(DBG_ERROR,"Failed to connect to the MQTT broker");
 
   //display remaining RAM space. For debug
-  Serial << F("[memCheck]: ") << freeRam() << F("b") << _endl;
+  Debug.print(DBG_VERBOSE,"[memCheck]: %db",freeRam());
 }
 
 //PublishData loop. Publishes system info/data to MQTT broker every XX secs (30 secs by default)
@@ -390,22 +374,20 @@ void PublishDataCallback(Task* me)
       serializeJson(root,Payload,sizeof(Payload));
       if (mqttClient.publish(PoolTopicMeas1, 1, true, Payload) != 0)
       {
-        Serial << F("Payload: ") << Payload << F(" - ");
-        Serial << F("Payload size: ") << root.size() << _endl;
+        Debug.print(DBG_DEBUG,"Payload: %s - Payload size: %d",Payload,root.size());
       }
       else
       {
-        Serial << F("Unable to publish the following payload: ") << Payload << _endl;
+        Debug.print(DBG_DEBUG,"Unable to publish the following payload: %s",Payload);
       }
     }
     else
     {
-      Serial << F("MQTT Payload buffer overflow! - ");
-      Serial << F("Payload size: ") << root.size() << _endl;
+      Debug.print(DBG_ERROR,"MQTT Payload buffer overflow! - Payload size: %d",root.size());
     }
   }
   else
-    Serial << F("Failed to connect to the MQTT broker") << _endl;
+    Debug.print(DBG_ERROR,"Failed to connect to the MQTT broker");
 
   //Second MQTT publish to limit size of payload at once
   if (mqttClient.connected())
@@ -425,23 +407,21 @@ void PublishDataCallback(Task* me)
       serializeJson(root,Payload,sizeof(Payload));
       if (mqttClient.publish(PoolTopicMeas2, 1, true, Payload) != 0)
       {
-        Serial << F("Payload: ") << Payload << F(" - ");
-        Serial << F("Payload size: ") << root.size() << _endl;
+        Debug.print(DBG_DEBUG,"Payload: %s - Payload size: %d",Payload,root.size());
       }
       else
       {
-        Serial << F("Unable to publish the following payload: ") << Payload << _endl;
+        Debug.print(DBG_DEBUG,"Unable to publish the following payload: %s",Payload);
       }
     }
     else
     {
-      Serial << F("MQTT Payload buffer overflow! - ");
-      Serial << F("Payload size: ") << root.size() << _endl;
+      Debug.print(DBG_ERROR,"MQTT Payload buffer overflow! - Payload size: %d",root.size());
     }
   }
   else
-    Serial << F("Failed to connect to the MQTT broker") << _endl;
+    Debug.print(DBG_ERROR,"Failed to connect to the MQTT broker");
 
   //display remaining RAM space. For debug
-  Serial << F("[memCheck]: ") << freeRam() << F("b") << _endl;
+  Debug.print(DBG_VERBOSE,"[memCheck]: %db",freeRam());
 }

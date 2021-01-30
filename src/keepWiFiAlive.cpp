@@ -10,42 +10,38 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
-#include <WiFiMulti.h>
 
-WiFiMulti wlan;
-
+#define WIFI_NETWORK "YOUR_SSID"
+#define WIFI_PASSWORD "YOUR_PASSWORD"
 #define WIFI_TIMEOUT_MS 20000      // 20 second WiFi connection timeout
 #define WIFI_RECOVER_TIME_MS 30000 // Wait 30 seconds after a failed connection attempt
-#define LED 2
+//#define LED 2
 
 void keepWiFiAlive(void *parameter)
 {
-  pinMode(LED, OUTPUT);
+  //pinMode(LED, OUTPUT);
   for (;;)
   {
     if (WiFi.status() == WL_CONNECTED)
     {
-      vTaskDelay(10000 / portTICK_PERIOD_MS);
+      delay(10000);
     }
     else
     {
-      digitalWrite(LED, LOW);
+      //digitalWrite(LED, LOW);
       Serial.println("[WIFI] Connecting");
       WiFi.mode(WIFI_STA);
       WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
-      esp_err_t ret = tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_STA ,"PoolMaster");
-      if(ret != ESP_OK ) Serial.println("Failed to set hostname");      
-      wlan.addAP("SSID1","PWD1");
-      wlan.addAP("SSID2","PWD2");
-      wlan.addAP("SSID3","PWD3");
+      WiFi.setHostname("PoolMaster");
+      WiFi.begin(WIFI_NETWORK, WIFI_PASSWORD);
+
       unsigned long startAttemptTime = millis();
 
       // Keep looping while we're not connected and haven't reached the timeout
-      // while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT_MS)
-      while (wlan.run() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT_MS)
+      while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT_MS)
+      // while (wlan.run() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT_MS)
       {
-        Serial.print(".");
-        vTaskDelay(500 / portTICK_PERIOD_MS);
+        delay(500);
       }
 
       // When we couldn't make a WiFi connection (or the timeout expired)
@@ -53,7 +49,7 @@ void keepWiFiAlive(void *parameter)
       if (WiFi.status() != WL_CONNECTED)
       {
         Serial.println("[WIFI] FAILED");
-        vTaskDelay(WIFI_RECOVER_TIME_MS / portTICK_PERIOD_MS);
+        delay(WIFI_RECOVER_TIME_MS);
       }
       else
       {
@@ -63,7 +59,7 @@ void keepWiFiAlive(void *parameter)
         Serial.println(WiFi.localIP());
         Serial.print("Hostname: ");
         Serial.println(WiFi.getHostname());
-        digitalWrite(LED, HIGH);
+        //digitalWrite(LED, HIGH);
       }
     }
   }

@@ -108,7 +108,7 @@
 
 // Used to simulate pH/ORP sensors. Very simple simulation: the sensor value is computed from the 
 // output of the PID loop to reach linearly the theorical value produced by this output after one hour
-#define SIMU
+//#define SIMU
 
 #ifdef SIMU
 bool init_simu = true;
@@ -116,19 +116,24 @@ double pHLastValue = 7.;
 unsigned long pHLastTime = 0;
 double OrpLastValue = 730.;
 unsigned long OrpLastTime = 0;
-unsigned long pHTab [3];
-unsigned long ChlTab [3];
+double pHTab [3] {0.,0.,0.};
+double ChlTab [3] {0.,0.,0.};
 uint8_t iw = 0;
+uint8_t jw = 0;
 bool newpHOutput = false;
 bool newChlOutput = false;
-unsigned long pHCumul = 0;
-unsigned long ChlCumul = 0;
+double pHCumul = 0.;
+double ChlCumul = 0.;
 #endif
 
 // Firmware revision
 String Firmw = "ESP-1.0";
 
 //Settings structure and its default values
+//To be modified for operational version : 
+// delayPIDs = 10 (minutes)
+// PSI parameters to determine
+// calibration coefficients
 StoreStruct storage =
 { 
   CONFIG_VERSION,
@@ -136,7 +141,7 @@ StoreStruct storage =
   12, 8, 22, 8, 22, 0,
   1800, 1800, 30000,
   1200000, 1200000, 0, 0,
-  7.3, 750.0, 0.5, 0.25, 10.0, 27.0, 3.0, 4.3, -2.63, -1189, 2564, 1.11, 0.0,
+  7.3, 750.0, 0.5, 0.25, 10.0, 27.0, 3.0, 3.507951, -1.923527, -972.741849, 2477.392837, 1.0, 0.0,
   2250000.0, 0.0, 0.0, 18000.0, 0.0, 0.0, 0.0, 0.0, 28.0, 0.0, 0.0, 0.4,
   100.0, 100.0, 20.0, 20.0, 1.5, 1.5
 };
@@ -151,7 +156,7 @@ OneWire oneWire_A(ONE_WIRE_BUS_A);
 // Pass our oneWire reference to Dallas Temperature library instance
 DallasTemperature sensors_A(&oneWire_A);
 // MAC Address of DS18b20 water temperature sensor
-DeviceAddress DS18b20_0 = { 0x28, 0x92, 0x25, 0x41, 0x0A, 0x00, 0x00, 0xEE };
+DeviceAddress DS18b20_0 = { 0x28, 0x9F, 0x24, 0x24, 0x0C, 0x0, 0x0, 0xA9 };
 
 // Setup an ADS1115 instance for pressure measurements
 ADS1115Scanner adc(0x48);  // Address 0x48 is the default
@@ -207,12 +212,14 @@ void OrpRegulationCallback(Task* me);
 void PHRegulationCallback(Task* me);
 void GenericCallback(Task* me);
 void PublishDataCallback(Task* me);
+void StatusLightsCallback(Task* me);
 
-Task t1(125, ADS1115Callback);                  //ORP, PH and PSI measurement readiness every 125ms
-Task t2(1000, OrpRegulationCallback);           //ORP regulation loop every 1 sec
-Task t3(1100, PHRegulationCallback);            //PH regulation loop every 1.1 sec
+Task t1(125, ADS1115Callback);                  //ORP, PH and PSI measurement readiness
+Task t2(1100, OrpRegulationCallback);           //ORP regulation loop
+Task t3(1300, PHRegulationCallback);            //PH regulation loop
 Task t4(PUBLISHINTERVAL, PublishDataCallback);  //Publish data to MQTT broker every 30 secs
-Task t5(600, GenericCallback);                  //Various things handled/updated in this loop every 0.6 secs
+Task t5(700, GenericCallback);                  //Various things handled/updated in this loop every 0.6 secs
+Task t6(3100, StatusLightsCallback);            //Status LED display
 
 // NVS Non Volatile SRAM (eqv. EEPROM)
 Preferences nvs;      
@@ -224,7 +231,7 @@ void readLocalTime(void);
 bool loadConfig(void);
 bool saveConfig(void);
 void WiFiEvent(WiFiEvent_t);
-void mqttInit(void);
+void mqttInit(void);                     
 void mqttErrorPublish(const char*);
 void InitTFT(void);
 void ResetTFT(void);
@@ -248,6 +255,10 @@ void setup()
   //Serial port for debug info
   Serial.begin(115200);
 
+  // Set appropriate debug level. The level is defined in PoolMaster.h
+  Debug.setDebugLevel(DEBUG_LEVEL);
+  Debug.timestampOn();
+
   // Initialize Nextion TFT
   InitTFT();
   ResetTFT();
@@ -256,23 +267,22 @@ void setup()
   if(nvs.begin("PoolMaster",true))
   {
     uint8_t vers = nvs.getUChar("ConfigVersion",0);
-    Serial.print("\nStored version: ");
-    Serial.println(vers);
+    Debug.print(DBG_INFO,"Stored version: %d",vers);
     nvs.end();
 
     if (vers == CONFIG_VERSION)
     {
-      Serial << F("Same version: ") << vers << F(" / ") << CONFIG_VERSION << F(". Loading settings from eeprom") << _endl;
-      if(loadConfig()) Serial.println("Config loaded"); //Restore stored values from NVS
+      Debug.print(DBG_NONE,"Same version: %d / %d. Loading settings from NVS",vers,CONFIG_VERSION);
+      if(loadConfig()) Debug.print(DBG_NONE,"Config loaded"); //Restore stored values from NVS
     }
     else
     {
-      Serial << F("New version: ") << vers << F(" / ") << CONFIG_VERSION << F(". Loading default settings, not from eeprom") << _endl;
-      if(saveConfig()) Serial.println("Config saved");  //First time use. Save default values to NVS
+      Debug.print(DBG_NONE,"New version: %d / %d. Loading new default settings",vers,CONFIG_VERSION);      
+      if(saveConfig()) Debug.print(DBG_NONE,"Config saved");  //First time use. Save new default values to NVS
     }
 
   } else {
-    Serial.println("NVS error");
+    Debug.print(DBG_ERROR,"NVS Error");
     nvs.end();
   }  
 
@@ -292,6 +302,8 @@ void setup()
   pinMode(RELAY_R1, OUTPUT);
   pinMode(RELAY_R2, OUTPUT);
 
+  pinMode(BUZZER, OUTPUT);
+
   // As the relays on the board are activated by a LOW level, set all levels HIGH at startup
   digitalWrite(FILTRATION_PUMP,HIGH);
   digitalWrite(PH_PUMP,HIGH); 
@@ -301,8 +313,9 @@ void setup()
   digitalWrite(RELAY_R1,HIGH);
   digitalWrite(RELAY_R2,HIGH);
 
-  pinMode(CHL_LEVEL, INPUT_PULLUP);
-  pinMode(PH_LEVEL, INPUT_PULLUP);
+// Warning: pins used here have no pull-ups, provide external ones
+  pinMode(CHL_LEVEL, INPUT);
+  pinMode(PH_LEVEL, INPUT);
 
   // Initialize watch-dog
   esp_task_wdt_init(WDT_TIMEOUT, true);
@@ -320,14 +333,14 @@ void setup()
     "keepWiFiAlive", // Task name
     5000,            // stack size 
     NULL,            // Parameter
-    1,               // Priority           
+    2,               // Priority           
     NULL,            // Task handle
     1                // Core 
   );
 
-  vTaskDelay(500);    // let task start-up and wait for connection
+  delay(500);    // let task start-up and wait for connection
   while(WiFi.status() != WL_CONNECTED) {
-    vTaskDelay(500 / portTICK_PERIOD_MS);
+    delay(500);
     Serial.print(".");
   }
 
@@ -338,11 +351,11 @@ void setup()
   StartTime();
   readLocalTime();
   setTime(timeinfo.tm_hour,timeinfo.tm_min,timeinfo.tm_sec,timeinfo.tm_mday,timeinfo.tm_mon+1,timeinfo.tm_year-100);
-  Serial.printf("\n%d/%02d/%02d %02d:%02d:%02d\n",year(),month(),day(),hour(),minute(),second());
+  Debug.print(DBG_NONE,"%d/%02d/%02d %02d:%02d:%02d",year(),month(),day(),hour(),minute(),second());
 
   // Initialize the mDNS library.
   while (!MDNS.begin("PoolMaster")) {
-    Serial.println("Error setting up MDNS responder!");
+    Debug.print(DBG_ERROR,"Error setting up MDNS responder!");
     delay(1000);
   }
   MDNS.addService("http", "tcp", SERVER_PORT);
@@ -351,13 +364,20 @@ void setup()
   gettemp.next(gettemp_start);
 
   // Start I2C and ADS1115 for analog measurements in asynchronous mode
-  Wire.begin();
+  Wire.begin(I2C_SDA,I2C_SCL);
+
   adc.setSpeed(ADS1115_SPEED_8SPS);
   adc.addChannel(ADS1115_CHANNEL0, ADS1115_RANGE_6144);
   adc.addChannel(ADS1115_CHANNEL1, ADS1115_RANGE_6144);
   adc.addChannel(ADS1115_CHANNEL2, ADS1115_RANGE_6144);
   adc.setSamples(1);
   adc.start();
+
+  // Clear status LEDs
+
+  Wire.beginTransmission(0x38);
+  Wire.write((uint8_t)0xFF);
+  Wire.endTransmission();
 
   // Start filtration pump at power-on if within scheduled time slots -- You can choose not to do this and start pump manually
   if (storage.AutoMode && (hour() >= storage.FiltrationStart) && (hour() < storage.FiltrationStop))
@@ -379,6 +399,7 @@ void setup()
   storage.OrpPIDwindowStartTime = millis();
 
   // Limit the PIDs output range in order to limit max. pumps runtime (safety first...)
+  // Set also a lower limit at 30s (a lower pump duration does'nt mean anything)
   PhPID.SetSampleTime((int)storage.PhPIDWindowSize);
   PhPID.SetOutputLimits(0, storage.PhPIDWindowSize);    //Whatever happens, don't allow continuous injection of Acid for more than a PID Window
 
@@ -406,13 +427,16 @@ void setup()
   // General loop
   SoftTimer.add(&t5);
 
+  // Status LED loop
+  SoftTimer.add(&t6);
+
   //display remaining RAM space. For debug
-  Serial << F("[memCheck]: ") << freeRam() << F("b") << _endl;
+  Debug.print(DBG_DEBUG,"memCheck: %db",freeRam());
 
   // Initialize OTA (On The Air update)
-  ArduinoOTA.setPort(8063);
+  ArduinoOTA.setPort(OTA_PORT);
   ArduinoOTA.setHostname("PoolMaster");
-  ArduinoOTA.setPasswordHash("---------------------------------"); // hash du password
+  ArduinoOTA.setPasswordHash("510179c0211489b9625a5f2e41da8469"); // hash de Fgixy001
   
   ArduinoOTA.onStart([]() {
     String type;
@@ -420,22 +444,22 @@ void setup()
       type = "sketch";
     else // U_SPIFFS
       type = "filesystem";
-    Serial.println("Start updating " + type);
+    Debug.print(DBG_NONE,"Start updating %s",type);
   });
   ArduinoOTA.onEnd([]() {
-  Serial.println("\nEnd");
+  Debug.print(DBG_NONE,"End");
   });
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
     esp_task_wdt_reset();           // reset Watchdog as upload may last some time...
     Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
   });
   ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("Error[%u]: ", error);
-    if      (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-    else if (error == OTA_END_ERROR) Serial.println("End Failed");
+    Debug.print(DBG_ERROR,"Error[%u]: ", error);
+    if      (error == OTA_AUTH_ERROR)    Debug.print(DBG_ERROR,"Auth Failed");
+    else if (error == OTA_BEGIN_ERROR)   Debug.print(DBG_ERROR,"Begin Failed");
+    else if (error == OTA_CONNECT_ERROR) Debug.print(DBG_ERROR,"Connect Failed");
+    else if (error == OTA_RECEIVE_ERROR) Debug.print(DBG_ERROR,"Receive Failed");
+    else if (error == OTA_END_ERROR)     Debug.print(DBG_ERROR,"End Failed");
   });
 
   ArduinoOTA.begin();
@@ -449,9 +473,41 @@ void ADS1115Callback(Task* me)
   if(adc.ready()){                                         // all conversions done ?
     orp_sensor_value = adc.readAverage(0)*0.1875/1000.;    // ORP sensor current value
     ph_sensor_value  = adc.readAverage(1)*0.1875/1000.;    // pH sensor current value
-    psi_sensor_value = adc.readAverage(2)*0.1875/1000.;    // pH sensor current value
+    psi_sensor_value = adc.readAverage(2)*0.1875/1000.;    // psi sensor current value
     adc.start();                                           // restart conversion
   }
+}
+
+void StatusLightsCallback(Task* me)
+{
+  static uint8_t line = 0;
+  uint8_t status;
+
+  status = 0;
+  status |= (line & 1) << 6;
+  if(line == 0)
+  {
+    line = 1;
+    status |= (storage.AutoMode & 1) << 5;
+    status |= (AntiFreezeFiltering & 1) << 4;
+    status |= (PSIError & 1) << 0;
+  } else
+  {
+    line = 0;
+    status |= (PhPID.GetMode() & 1) << 5;
+    status |= (OrpPID.GetMode() & 1) << 4;
+    status |= (!PhPump.TankLevel() & 1) << 3;
+    status |= (!ChlPump.TankLevel() & 1) << 2;
+    status |= (PhPump.UpTimeError & 1) << 1;
+    status |= (ChlPump.UpTimeError & 1) << 0;  
+  }
+  (status & 0x0F) ? digitalWrite(BUZZER,HIGH) : digitalWrite(BUZZER,LOW) ;
+  if(WiFi.status() == WL_CONNECTED) status |= 0x80;
+    else status |= 0x00;
+  Debug.print(DBG_VERBOSE,"Status LED : 0x%02x",status);  
+  Wire.beginTransmission(0x38);
+  Wire.write(~status);
+  Wire.endTransmission();
 }
 
 //Loop where various tasks are updated/handled
@@ -525,8 +581,8 @@ void GenericCallback(Task* me)
     saveParam("FiltrStart",storage.FiltrationStart);  
     saveParam("FiltrStop",storage.FiltrationStop);  
 
-    Serial << F("Filtration: ") << storage.FiltrationDuration << _endl;
-    Serial << F("Start: ") << storage.FiltrationStart << F(" Stop: ") << storage.FiltrationStop << _endl;
+    Debug.print(DBG_INFO,"Filtration: %d",storage.FiltrationDuration);
+    Debug.print(DBG_INFO,"Start: %d Stop: %d",storage.FiltrationStart,storage.FiltrationStop);
 
     d_calc = true;
   }
@@ -544,13 +600,13 @@ void GenericCallback(Task* me)
   if (FiltrationPump.IsRunning() && storage.AutoMode && !RobotPump.IsRunning() && ((millis() - FiltrationPump.LastStartTime) / 1000 / 60) >= 30 && !cleaning_done)
   {
     RobotPump.Start();
-    Serial.println("Robot Start 30mn aprés Filtration");    
+    Debug.print(DBG_INFO,"Robot Start 30mn after Filtration");    
   }
   if(RobotPump.IsRunning() && storage.AutoMode && ((millis() - RobotPump.LastStartTime) / 1000 / 60) >= 120)
   {
     RobotPump.Stop();
     cleaning_done = true;
-    Serial.printf("Robot Stop after: %d mn\n",(int)(millis()-RobotPump.LastStartTime)/1000/60);
+    Debug.print(DBG_INFO,"Robot Stop after: %d mn",(int)(millis()-RobotPump.LastStartTime)/1000/60);
   }
 
   // start PIDs with delay after FiltrationStart in order to let the readings stabilize
@@ -607,15 +663,15 @@ void PHRegulationCallback(Task * me)
   if (FiltrationPump.IsRunning()  && (PhPID.GetMode() == AUTOMATIC))
   {  
     if(PhPID.Compute()){
-      sprintf(TimeBuffer, "%d-%02d-%02d %02d:%02d:%02d", year(), month(), day(), hour(), minute(), second());
-      Serial << TimeBuffer << F(" - ");
-      Serial << F("Ph  regulation: ") << storage.PhPIDOutput << _endl;
+      Debug.print(DBG_VERBOSE,"Ph  regulation: %10.2f, %13.9f, %13.9f, %17.9f",storage.PhPIDOutput,storage.PhValue,storage.Ph_SetPoint,storage.Ph_Kp);
+      if(storage.PhPIDOutput < (double)30000.) storage.PhPIDOutput = 0.;
+      Debug.print(DBG_INFO,"Ph  regulation: %10.2f",storage.PhPIDOutput);
 #ifdef SIMU
       newpHOutput = true;
 #endif            
     }
 #ifdef SIMU
-     else newpHOutput = false;
+    else newpHOutput = false;
 #endif    
     /************************************************
       turn the Acid pump on/off based on pid output
@@ -640,18 +696,18 @@ void OrpRegulationCallback(Task * me)
   if (FiltrationPump.IsRunning() && (OrpPID.GetMode() == AUTOMATIC))
   {
     if(OrpPID.Compute()){
-      sprintf(TimeBuffer, "%d-%02d-%02d %02d:%02d:%02d", year(), month(), day(), hour(), minute(), second());
-      Serial << TimeBuffer << F(" - ");    
-      Serial << F("Orp regulation: ") << storage.OrpPIDOutput << _endl;
+      Debug.print(DBG_VERBOSE,"ORP regulation: %10.2f, %13.9f, %12.9f, %17.9f",storage.OrpPIDOutput,storage.OrpValue,storage.Orp_SetPoint,storage.Orp_Kp);
+      if(storage.OrpPIDOutput < (double)30000.) storage.OrpPIDOutput = 0.;    
+      Debug.print(DBG_INFO,"Orp regulation: %10.2f",storage.OrpPIDOutput);
 #ifdef SIMU
       newChlOutput = true;
 #endif      
     }
 #ifdef SIMU
-     else newChlOutput = false;
+    else newChlOutput = false;
 #endif    
     /************************************************
-      turn the Acid pump on/off based on pid output
+      turn the Chl pump on/off based on pid output
     ************************************************/
     if (millis() - storage.OrpPIDwindowStartTime > storage.OrpPIDWindowSize)
     {
@@ -725,6 +781,8 @@ void getMeasures()
     if(newpHOutput) {
       pHTab[iw] = storage.PhPIDOutput;
       pHCumul = pHTab[0]+pHTab[1]+pHTab[2];
+      iw++;
+      iw %= 3;
     }
     storage.PhValue = pHLastValue + pHCumul/4500000.*(double)((millis()-pHLastTime)/3600000.);
     pHLastValue = storage.PhValue;
@@ -733,11 +791,13 @@ void getMeasures()
     init_simu = false;
     pHLastTime = millis();
     pHLastValue = 7.0;
+    storage.PhValue = pHLastValue;
+    storage.OrpValue = OrpLastValue;
     OrpLastTime = millis();
     OrpLastValue = 730.0;
     for(uint8_t i=0;i<3;i++) {
-      pHTab[i] = 0;
-      ChlTab[i] = 0;
+      pHTab[i] = 0.;
+      ChlTab[i] = 0.;
     }  
   }  
 #endif
@@ -752,15 +812,15 @@ void getMeasures()
 #ifdef SIMU
   if(!init_simu){
     if(newChlOutput) {
-      ChlTab[iw] = storage.OrpPIDOutput;
+      ChlTab[jw] = storage.OrpPIDOutput;
       ChlCumul = ChlTab[0]+ChlTab[1]+ChlTab[2];
-      iw++;
-      iw %= 3;
+      jw++;
+      jw %= 3;
     }    
     storage.OrpValue = OrpLastValue + ChlCumul/36000.*(double)((millis()-OrpLastTime)/3600000.);
     OrpLastValue = storage.OrpValue;
     OrpLastTime = millis();    
-  }   
+  } 
 #endif
 
   //PSI (water pressure)
@@ -769,13 +829,10 @@ void getMeasures()
   samples_PSI.add(storage.PSIValue);                                                                    // compute average of PSI from last 5 measurements
   storage.PSIValue = samples_PSI.getAverage(3);
 
-#ifdef DEBUG
-  sprintf(TimeBuffer, "%d-%02d-%02d %02d:%02d:%02d", year(), month(), day(), hour(), minute(), second());
-  Serial << TimeBuffer << F(" - ");
-  Serial << F("Ph: ") << ph_sensor_value << "V - " << storage.PhValue << F(" - ");
-  Serial << F("Orp: ") << orp_sensor_value << "V - " << storage.OrpValue << F("mV") << " - ";  
-  Serial << F("PSI: ") << psi_sensor_value << "V - " << storage.PSIValue << F("Bar\r");
-#endif
+
+  Debug.print(DBG_DEBUG,"pH: %5.3fV - %4.2f - ORP: %5.3fV - %3.0fmV - PSI: %5.3fV - %4.2fBar\r",
+    ph_sensor_value,storage.PhValue,orp_sensor_value,storage.OrpValue,psi_sensor_value,storage.PSIValue);
+
 }
 
 bool loadConfig()
@@ -900,7 +957,7 @@ bool saveConfig()
 
   nvs.end();
 
-  Serial.printf("Bytes saved: %d / %d\n",i,sizeof(storage));
+  Debug.print(DBG_INFO,"Bytes saved: %d / %d\n",i,sizeof(storage));
   return (i == sizeof(storage)) ;
 
 }
@@ -978,20 +1035,12 @@ void gettemp_read()
 {
   storage.TempValue = sensors_A.getTempC(DS18b20_0);
   if (storage.TempValue == NAN || storage.TempValue == -127) {
-#ifdef DEBUG
-    sprintf(TimeBuffer, "%d-%02d-%02d %02d:%02d:%02d", year(), month(), day(), hour(), minute(), second());
-    Serial << _endl << TimeBuffer << F(" - ");    
-    Serial << F("Error getting temperature from DS18b20_0") << _endl;
-#endif    
+    Debug.print(DBG_WARNING,"Error getting temperature from DS18b20_0");
     storage.TempValue = 28;
   }  
   samples_Temp.add(storage.TempValue);
   storage.TempValue = samples_Temp.getAverage(5);
-#ifdef DEBUG  
-  sprintf(TimeBuffer, "%d-%02d-%02d %02d:%02d:%02d", year(), month(), day(), hour(), minute(), second());
-  Serial << _endl << TimeBuffer << F(" - ");
-  Serial << F("DS18b20_0: ") << storage.TempValue << F("°C") << _endl;
-#endif  
+  Debug.print(DBG_DEBUG,"DS18b20_0: %6.2f°C",storage.TempValue);
   gettemp.next(gettemp_request);
 }
 
@@ -1004,13 +1053,13 @@ void StartTime(){
   setenv("TZ","CET-1CEST,M3.5.0/2,M10.5.0/3",3);                       // configure local time with automatic DST  
   tzset();
   delay(200);
-  Serial.println("NTP configured");
+  Debug.print(DBG_INFO,"NTP configured");
 }
 
 void readLocalTime(){
   if(!getLocalTime(&timeinfo)){
-    Serial.println("Failed to obtain time");
+    Debug.print(DBG_WARNING,"Failed to obtain time");
     StartTime();
   }
-  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  Serial.println(&timeinfo,"%A, %B %d %Y %H:%M:%S");
 }

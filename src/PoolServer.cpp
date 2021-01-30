@@ -32,34 +32,32 @@ void ProcessCommand(String JSONCommand)
   // Test if parsing succeeds.
   if (error)
   {
-    Serial << F("Json parseObject() failed");
+    Debug.print(DBG_DEBUG,"Json parseObject() failed");
     return;
   }
   else
   {
-    Serial << F("Json parseObject() success - ") << endl;
-    DEBUG_PRINT(JSONCommand);
+    Debug.print(DBG_DEBUG,"Json parseObject() success: %s",JSONCommand);
 
     //Provide the external temperature. Should be updated regularly and will be used to start filtration for 10mins every hour when temperature is negative
     if (command.containsKey(F("TempExt")))
     {
       storage.TempExternal = command["TempExt"].as<float>();
-      Serial << F("External Temperature: ") << storage.TempExternal << F("deg") << endl;
+      Debug.print(DBG_DEBUG,"External Temperature: %4.1f°C",storage.TempExternal);
     }
     //"PhCalib" command which computes and sets the calibration coefficients of the pH sensor response based on a multi-point linear regression
     //{"PhCalib":[4.02,3.8,9.0,9.11]}  -> multi-point linear regression calibration (minimum 1 point-couple, 6 max.) in the form [ProbeReading_0, BufferRating_0, xx, xx, ProbeReading_n, BufferRating_n]
     else if (command.containsKey(F("PhCalib")))
     {
-      float CalibPoints[12];//Max six calibration point-couples! Should be plenty enough
+      float CalibPoints[12]; //Max six calibration point-couples! Should be plenty enough
       int NbPoints = (int)copyArray(command[F("PhCalib")].as<JsonArray>(),CalibPoints);        
-      Serial << F("PhCalib command - ") << NbPoints << F(" points received: ");
+      Debug.print(DBG_DEBUG,"PhCalib command - %d points received",NbPoints);
       for (int i = 0; i < NbPoints; i += 2)
-        Serial << CalibPoints[i] << F(",") << CalibPoints[i + 1] << F(" - ");
-      Serial << _endl;
+        Debug.print(DBG_DEBUG,"%10.2f - %10.2f",CalibPoints[i],CalibPoints[i + 1]);
 
       if (NbPoints == 2) //Only one pair of points. Perform a simple offset calibration
       {
-        Serial << F("2 points. Performing a simple offset calibration") << _endl;
+        Debug.print(DBG_DEBUG,"2 points. Performing a simple offset calibration");
 
         //compute offset correction
         storage.pHCalibCoeffs1 += CalibPoints[1] - CalibPoints[0];
@@ -67,11 +65,11 @@ void ProcessCommand(String JSONCommand)
         //Set slope back to default value
         storage.pHCalibCoeffs0 = 3.76;
 
-        Serial << F("Calibration completed. Coeffs are: ") << storage.pHCalibCoeffs0 << F(",") << storage.pHCalibCoeffs1 << _endl;
+        Debug.print(DBG_DEBUG,"Calibration completed. Coeffs are: %10.2f, %10.2f",storage.pHCalibCoeffs0,storage.pHCalibCoeffs1);
       }
       else if ((NbPoints > 3) && (NbPoints % 2 == 0)) //we have at least 4 points as well as an even number of points. Perform a linear regression calibration
       {
-        Serial << NbPoints / 2 << F(" points. Performing a linear regression calibration") << _endl;
+        Debug.print(DBG_DEBUG,"%d points. Performing a linear regression calibration",NbPoints / 2);
 
         float xCalibPoints[NbPoints / 2];
         float yCalibPoints[NbPoints / 2];
@@ -87,7 +85,7 @@ void ProcessCommand(String JSONCommand)
         //Compute linear regression coefficients
         simpLinReg(xCalibPoints, yCalibPoints, storage.pHCalibCoeffs0, storage.pHCalibCoeffs1, NbPoints / 2);
 
-        Serial << F("Calibration completed. Coeffs are: ") << storage.pHCalibCoeffs0 << F(",") << storage.pHCalibCoeffs1 << _endl;
+        Debug.print(DBG_DEBUG,"Calibration completed. Coeffs are: %10.2f, %10.2f",storage.pHCalibCoeffs0 ,storage.pHCalibCoeffs1);
       }
       //Store the new coefficients in eeprom
       saveParam("pHCalibCoeffs0",storage.pHCalibCoeffs0);
@@ -98,16 +96,14 @@ void ProcessCommand(String JSONCommand)
     //{"OrpCalib":[450,465,750,784]}   -> multi-point linear regression calibration (minimum 1 point-couple, 6 max.) in the form [ProbeReading_0, BufferRating_0, xx, xx, ProbeReading_n, BufferRating_n]
     else if (command.containsKey(F("OrpCalib")))
     {
-      float CalibPoints[12];//Max six calibration point-couples! Should be plenty enough
+      float CalibPoints[12]; //Max six calibration point-couples! Should be plenty enough
       int NbPoints = (int)copyArray(command[F("OrpCalib")].as<JsonArray>(),CalibPoints);
-      Serial << F("OrpCalib command - ") << NbPoints << F(" points received: ");
+      Debug.print(DBG_DEBUG,"OrpCalib command - %d points received",NbPoints);
       for (int i = 0; i < NbPoints; i += 2)
-        Serial << CalibPoints[i] << F(",") << CalibPoints[i + 1] << F(" - ");
-      Serial << _endl;
-
+        Debug.print(DBG_DEBUG,"%10.2f - %10.2f",CalibPoints[i],CalibPoints[i + 1]);        
       if (NbPoints == 2) //Only one pair of points. Perform a simple offset calibration
       {
-        Serial << F("2 points. Performing a simple offset calibration") << _endl;
+        Debug.print(DBG_DEBUG,"2 points. Performing a simple offset calibration");
 
         //compute offset correction
         storage.OrpCalibCoeffs1 += CalibPoints[1] - CalibPoints[0];
@@ -115,11 +111,11 @@ void ProcessCommand(String JSONCommand)
         //Set slope back to default value
         storage.OrpCalibCoeffs0 = -1000;
 
-        Serial << F("Calibration completed. Coeffs are: ") << storage.OrpCalibCoeffs0 << F(",") << storage.OrpCalibCoeffs1 << _endl;
+        Debug.print(DBG_DEBUG,"Calibration completed. Coeffs are: %10.2f, %10.2f",storage.OrpCalibCoeffs0,storage.OrpCalibCoeffs1);
       }
       else if ((NbPoints > 3) && (NbPoints % 2 == 0)) //we have at least 4 points as well as an even number of points. Perform a linear regression calibration
       {
-        Serial << NbPoints / 2 << F(" points. Performing a linear regression calibration") << _endl;
+        Debug.print(DBG_DEBUG,"%d points. Performing a linear regression calibration",NbPoints / 2);
 
         float xCalibPoints[NbPoints / 2];
         float yCalibPoints[NbPoints / 2];
@@ -135,7 +131,7 @@ void ProcessCommand(String JSONCommand)
         //Compute linear regression coefficients
         simpLinReg(xCalibPoints, yCalibPoints, storage.OrpCalibCoeffs0, storage.OrpCalibCoeffs1, NbPoints / 2);
 
-        Serial << F("Calibration completed. Coeffs are: ") << storage.OrpCalibCoeffs0 << F(",") << storage.OrpCalibCoeffs1 << _endl;
+        Debug.print(DBG_DEBUG,"Calibration completed. Coeffs are: %10.2f, %10.2f",storage.OrpCalibCoeffs0,storage.OrpCalibCoeffs1);
       }
       //Store the new coefficients in eeprom
       saveParam("OrpCalibCoeffs0",storage.OrpCalibCoeffs0);
@@ -148,14 +144,13 @@ void ProcessCommand(String JSONCommand)
     {
       float CalibPoints[12];//Max six calibration point-couples! Should be plenty enough, typically use two point-couples (filtration ON and filtration OFF)
       int NbPoints = (int)copyArray(command[F("PSICalib")].as<JsonArray>(),CalibPoints);
-      Serial << F("PSICalib command - ") << NbPoints << F(" points received: ");
+      Debug.print(DBG_DEBUG,"PSICalib command - %d points received",NbPoints);
       for (int i = 0; i < NbPoints; i += 2)
-        Serial << CalibPoints[i] << F(",") << CalibPoints[i + 1] << F(" - ");
-      Serial << _endl;
+        Debug.print(DBG_DEBUG,"%10.2f, %10.2f",CalibPoints[i],CalibPoints[i + 1]);
 
       if ((NbPoints > 3) && (NbPoints % 2 == 0)) //we have at least 4 points as well as an even number of points. Perform a linear regression calibration
       {
-        Serial << NbPoints / 2 << F(" points. Performing a linear regression calibration") << _endl;
+        Debug.print(DBG_DEBUG,"%d points. Performing a linear regression calibration",NbPoints / 2);
 
         float xCalibPoints[NbPoints / 2];
         float yCalibPoints[NbPoints / 2];
@@ -176,7 +171,7 @@ void ProcessCommand(String JSONCommand)
         saveParam("PSICalibCoeffs0",storage.PSICalibCoeffs0);
         saveParam("PSICalibCoeffs1",storage.PSICalibCoeffs1);          
         PublishSettings();
-        Serial << F("Calibration completed. Coeffs are: ") << storage.PSICalibCoeffs0 << F(",") << storage.PSICalibCoeffs1 << _endl;
+        Debug.print(DBG_DEBUG,"Calibration completed. Coeffs are: %10.2f, %10.2f",storage.PSICalibCoeffs0,storage.PSICalibCoeffs1);
       }
     }
     //"Mode" command which sets regulation and filtration to manual or auto modes
@@ -217,10 +212,10 @@ void ProcessCommand(String JSONCommand)
     {
       if ((int)command[F("RobotPump")] == 0){
         RobotPump.Stop();    //stop robot pump
-        Serial.println("Robot Stop commandé");
+        Debug.print(DBG_INFO,"Robot Stop command");
       } else {
         RobotPump.Start();   //start robot pump
-        Serial.println("Robot Start commandé");
+        Debug.print(DBG_INFO,"Robot Start command");
       }  
     }
     else if (command.containsKey(F("PhPump"))) //"PhPump" command which starts or stops the Acid pump
@@ -269,19 +264,20 @@ void ProcessCommand(String JSONCommand)
     }
     else if (command.containsKey(F("PhSetPoint"))) //"PhSetPoint" command which sets the setpoint for Ph
     {
-      storage.Ph_SetPoint = (float)command[F("PhSetPoint")];
+      storage.Ph_SetPoint = command[F("PhSetPoint")].as<double>();
+      Debug.print(DBG_DEBUG,"Command PhSetPoint: %13.9f",storage.Ph_SetPoint);
       saveParam("Ph_SetPoint",storage.Ph_SetPoint);
       PublishSettings();
     }
     else if (command.containsKey(F("OrpSetPoint"))) //"OrpSetPoint" command which sets the setpoint for ORP
     {
-      storage.Orp_SetPoint = (float)command[F("OrpSetPoint")];
+      storage.Orp_SetPoint = command[F("OrpSetPoint")].as<double>();
       saveParam("Orp_SetPoint",storage.Orp_SetPoint);
       PublishSettings();
     }
     else if (command.containsKey(F("WSetPoint"))) //"WSetPoint" command which sets the setpoint for Water temp (currently not in use)
     {
-      storage.WaterTemp_SetPoint = (float)command[F("WSetPoint")];
+      storage.WaterTemp_SetPoint = (double)command[F("WSetPoint")];
       saveParam("WaterTempSet",storage.WaterTemp_SetPoint);
       PublishSettings();
     }
@@ -289,9 +285,9 @@ void ProcessCommand(String JSONCommand)
     //First parameter is volume of tank in Liters, second parameter is percentage Fill of the tank (typically 100% when new)
     else if (command.containsKey(F("pHTank")))
     {
-      storage.pHTankVol = (float)command[F("pHTank")][0];
+      storage.pHTankVol = (double)command[F("pHTank")][0];
       PhPump.SetTankVolume(storage.pHTankVol);
-      storage.AcidFill = (float)command[F("pHTank")][1];
+      storage.AcidFill = (double)command[F("pHTank")][1];
       PhPump.ResetUpTime();
       saveParam("pHTankVol",storage.pHTankVol);
       saveParam("AcidFill",storage.AcidFill);               
@@ -301,9 +297,9 @@ void ProcessCommand(String JSONCommand)
     //First parameter is volume of tank in Liters, second parameter is percentage Fill of the tank (typically 100% when new)
     else if (command.containsKey(F("ChlTank")))
     {
-      storage.ChlTankVol = (float)command[F("ChlTank")][0];
+      storage.ChlTankVol = (double)command[F("ChlTank")][0];
       ChlPump.SetTankVolume(storage.ChlTankVol);
-      storage.ChlFill = (float)command[F("ChlTank")][1];
+      storage.ChlFill = (double)command[F("ChlTank")][1];
       ChlPump.ResetUpTime();
       saveParam("ChlTankVol",storage.ChlTankVol);
       saveParam("ChlFill",storage.ChlFill);
@@ -311,7 +307,7 @@ void ProcessCommand(String JSONCommand)
     }
     else if (command.containsKey(F("WTempLow"))) //"WTempLow" command which sets the setpoint for Water temp low threshold
     {
-      storage.WaterTempLowThreshold = (float)command[F("WTempLow")];
+      storage.WaterTempLowThreshold = (double)command[F("WTempLow")];
       saveParam("WaterTempLow",storage.WaterTempLowThreshold);
       PublishSettings();
     }
@@ -361,13 +357,6 @@ void ProcessCommand(String JSONCommand)
     }
     else if (command.containsKey(F("Date"))) //"Date" command which sets the Date of RTC module
     {
-      /*   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-      // This line sets the RTC with an explicit date & time, for example to set
-      // January 21, 2014 at 3am you would call:
-      // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
-      rtc.adjust(DateTime((uint8_t)command[F("Date")][3], (uint8_t)command[F("Date")][2], (uint8_t)command[F("Date")][0], (uint8_t)command[F("Date")][4], (uint8_t)command[F("Date")][5], (uint8_t)command[F("Date")][6]));
-      */
-
       setTime((uint8_t)command[F("Date")][4], (uint8_t)command[F("Date")][5], (uint8_t)command[F("Date")][6], (uint8_t)command[F("Date")][0], (uint8_t)command[F("Date")][2], (uint8_t)command[F("Date")][3]); //(Day of the month, Day of the week, Month, Year, Hour, Minute, Second)
     }
     else if (command.containsKey(F("FiltT0"))) //"FiltT0" command which sets the earliest hour when starting Filtration pump
@@ -414,7 +403,7 @@ void ProcessCommand(String JSONCommand)
     }
     else if (command.containsKey(F("PSIHigh"))) //"PSIHigh" command which sets the water high-pressure threshold
     {
-      storage.PSI_HighThreshold = (float)command[F("PSIHigh")];
+      storage.PSI_HighThreshold = (double)command[F("PSIHigh")];
       saveParam("PSI_High",storage.PSI_HighThreshold);
       PublishSettings();
     }
@@ -437,20 +426,20 @@ void ProcessCommand(String JSONCommand)
     }
     else if (command.containsKey(F("Reboot")))//"Reboot" command forces a reboot of the controller
     {
-      vTaskDelay(10000 / portTICK_PERIOD_MS); // wait 10s then restart. Other tasks continue.
+      delay(10000); // wait 10s then restart. Other tasks continue.
       esp_restart();
     }
     else if (command.containsKey(F("pHPumpFR")))//"PhPumpFR" set flow rate of Ph pump
     {
-      storage.pHPumpFR = (float)command[F("pHPumpFR")];
-      PhPump.SetFlowRate((float)command[F("pHPumpFR")]);
+      storage.pHPumpFR = (double)command[F("pHPumpFR")];
+      PhPump.SetFlowRate((double)command[F("pHPumpFR")]);
       saveParam("pHPumpFR",storage.pHPumpFR);
       PublishSettings();
     }
     else if (command.containsKey(F("ChlPumpFR")))//"ChlPumpFR" set flow rate of Chl pump
     {
-      storage.ChlPumpFR = (float)command[F("ChlPumpFR")];
-      ChlPump.SetFlowRate((float)command[F("ChlpumpFR")]);
+      storage.ChlPumpFR = (double)command[F("ChlPumpFR")];
+      ChlPump.SetFlowRate((double)command[F("ChlpumpFR")]);
       saveParam("ChlPumpFR",storage.ChlPumpFR);
       PublishSettings();
     }
@@ -464,16 +453,16 @@ void ProcessCommand(String JSONCommand)
     }
     else if (command.containsKey(F("RstOrpCal")))//"RstOrpCal" reset the calibration coefficients of the Orp probe
     {
-      storage.OrpCalibCoeffs0 = -1189;
-      storage.OrpCalibCoeffs1 = 2564;
+      storage.OrpCalibCoeffs0 = (double)-1189.;
+      storage.OrpCalibCoeffs1 = (double)2564.;
       saveParam("OrpCalibCoeffs0",storage.OrpCalibCoeffs0);
       saveParam("OrpCalibCoeffs1",storage.OrpCalibCoeffs1);
       PublishSettings();
     }
     else if (command.containsKey(F("RstPSICal")))//"RstPSICal" reset the calibration coefficients of the pressure sensor
     {
-      storage.PSICalibCoeffs0 = 1.11;
-      storage.PSICalibCoeffs1 = 0;
+      storage.PSICalibCoeffs0 = (double)1.11;
+      storage.PSICalibCoeffs1 = (double)0;
       saveParam("PSICalibCoeffs0",storage.PSICalibCoeffs0);
       saveParam("PSICalibCoeffs1",storage.PSICalibCoeffs1);
       PublishSettings();

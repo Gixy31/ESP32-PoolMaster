@@ -12,6 +12,7 @@
 
 String temp;
 bool TFT_ON = true;
+bool refresh = false;
 // Last action time done on TFT. Go to sleep after TFT_SLEEP
 unsigned long LastAction = 0;
 
@@ -26,10 +27,15 @@ void InitTFT()
   myNex.begin(9600);
 }
 
-//reset TFT at start of controller
+//reset TFT at start of controller - Change transmission rate to 115200 bauds on both side (Nextion then ESP)
+//could have been not in HMI file, but it is good to know that after reset the Nextion goes back to 9600 bauds
 void ResetTFT()
 {
   myNex.writeStr(F("rest"));
+  delay(1000);
+  myNex.writeStr("baud=115200");
+  delay(100);
+  myNex.begin(115200);
   LastAction = millis();
 }
 
@@ -63,7 +69,7 @@ void UpdateTFT()
     myNex.writeStr(F("page0.vaMCFW.txt"), TFTStruc.FW);
   }
 
-  if (MQTTConnection != TFTStruc.NetW)
+  if (MQTTConnection != TFTStruc.NetW || !refresh)
   {
     TFTStruc.NetW = MQTTConnection;
     myNex.writeNum(F("page1.vabNetW.val"), TFTStruc.NetW);
@@ -194,7 +200,7 @@ void UpdateTFT()
     if (CurrentPage == 0)  myNex.writeStr(F("pHTk.txt"), temp);
   }
 
-  if (storage.AutoMode != TFTStruc.Mode)
+  if (storage.AutoMode != TFTStruc.Mode || !refresh)
   {
     if ((debounceM == 0) || (debounceM > debounceCount))
     {
@@ -228,7 +234,7 @@ void UpdateTFT()
       debounceM++;
   }
 
-  if (FiltrationPump.IsRunning() != TFTStruc.Filt)
+  if (FiltrationPump.IsRunning() != TFTStruc.Filt || !refresh)
   {
     if ((debounceF == 0) || (debounceF > debounceCount))
     {
@@ -247,7 +253,7 @@ void UpdateTFT()
       debounceF++;
   }
 
-  if (RobotPump.IsRunning() != TFTStruc.Robot)
+  if (RobotPump.IsRunning() != TFTStruc.Robot || !refresh)
   {
     if ((debounceH == 0) || (debounceH > debounceCount))
     {
@@ -266,7 +272,7 @@ void UpdateTFT()
       debounceH++;
   }
 
-  if (digitalRead(RELAY_R0) != TFTStruc.R0)
+  if (digitalRead(RELAY_R0) != TFTStruc.R0 || !refresh)
   {
     if ((debounceR0 == 0) || (debounceR0 > debounceCount))
     {
@@ -285,7 +291,7 @@ void UpdateTFT()
       debounceR0++;
   }
 
-  if (digitalRead(RELAY_R1) != TFTStruc.R1)
+  if (digitalRead(RELAY_R1) != TFTStruc.R1 || !refresh)
   {
     if ((debounceR1 == 0) || (debounceR1 > debounceCount))
     {
@@ -304,7 +310,7 @@ void UpdateTFT()
       debounceR1++;
   }
 
-  if (digitalRead(RELAY_R2) != TFTStruc.R2)
+  if (digitalRead(RELAY_R2) != TFTStruc.R2 || !refresh)
   {
     if ((debounceR2 == 0) || (debounceR2 > debounceCount))
     {
@@ -324,7 +330,7 @@ void UpdateTFT()
       debounceR2++;
   }
 
-  if (ChlPump.TankLevel() != TFTStruc.ChlTLErr)
+  if (ChlPump.TankLevel() != TFTStruc.ChlTLErr || !refresh)
   {
     TFTStruc.ChlTLErr = ChlPump.TankLevel();
     if (!TFTStruc.ChlTLErr)
@@ -335,7 +341,7 @@ void UpdateTFT()
       myNex.writeStr(F("page0.vaChlLevel.val=0"));
   }
 
-  if (PhPump.TankLevel() != TFTStruc.pHTLErr)
+  if (PhPump.TankLevel() != TFTStruc.pHTLErr || !refresh)
   {
     TFTStruc.pHTLErr = PhPump.TankLevel();
     if (!TFTStruc.pHTLErr)
@@ -346,7 +352,7 @@ void UpdateTFT()
       myNex.writeStr(F("page0.vaAcidLevel.val=0"));
   }
 
-  if (PSIError != TFTStruc.PSIErr)
+  if (PSIError != TFTStruc.PSIErr || !refresh)
   {
     TFTStruc.PSIErr = PSIError;
     if (TFTStruc.PSIErr)
@@ -357,7 +363,7 @@ void UpdateTFT()
       myNex.writeStr(F("page0.vaPSIErr.val=0"));
   }
 
-  if (ChlPump.UpTimeError != TFTStruc.ChlUTErr)
+  if (ChlPump.UpTimeError != TFTStruc.ChlUTErr || !refresh)
   {
     TFTStruc.ChlUTErr = ChlPump.UpTimeError;
     if (TFTStruc.ChlUTErr)
@@ -368,7 +374,7 @@ void UpdateTFT()
       myNex.writeStr(F("page0.vaChlUTErr.val=0"));
   }
 
-  if (PhPump.UpTimeError != TFTStruc.pHUTErr)
+  if (PhPump.UpTimeError != TFTStruc.pHUTErr || !refresh)
   {
     TFTStruc.pHUTErr = PhPump.UpTimeError;
     if (TFTStruc.pHUTErr)
@@ -407,6 +413,7 @@ void UpdateTFT()
     myNex.writeStr("sleep=1");
     TFT_ON = false;
   }
+  refresh = true;
 }
 
 //Page 0 has finished loading
@@ -414,26 +421,20 @@ void UpdateTFT()
 void trigger1()
 {
   CurrentPage = 0;
-  DEBUG_PRINT(F("Nextion p0"));
+  Debug.print(DBG_VERBOSE,"Nextion p0");
   if(!TFT_ON)
   {
     TFTStruc =
     { //default values to force update on next refresh
       -1., -1., -1., -1., -1., -1., -1., -1.,
       0, 0, 0, 0,
-      0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       99, 99,
       ""
     };
-    // force update of relays states as we can't manage that with a third state in default values
-    TFTStruc.R0 = digitalRead(RELAY_R0);
-    myNex.writeNum(F("page1.vabR0.val"), !TFTStruc.R0);
-    TFTStruc.R1 = digitalRead(RELAY_R1);
-    myNex.writeNum(F("page1.vabR1.val"), !TFTStruc.R1);
-    TFTStruc.R2 = digitalRead(RELAY_R2);
-    myNex.writeNum(F("page1.vabR2.val"), !TFTStruc.R2);
     UpdateWiFi(WiFi.status() == WL_CONNECTED);
     TFT_ON = true;  
+    refresh = false;
   }
   LastAction = millis();
 }
@@ -443,7 +444,7 @@ void trigger1()
 void trigger2()
 {
   CurrentPage = 1;
-  DEBUG_PRINT(F("Nextion p1"));
+  Debug.print(DBG_VERBOSE,"Nextion p1");
   LastAction = millis();
 }
 
@@ -452,7 +453,7 @@ void trigger2()
 void trigger3()
 {
   CurrentPage = 2;
-  DEBUG_PRINT(F("Nextion p2"));
+  Debug.print(DBG_VERBOSE,"Nextion p2");
   LastAction = millis();  
 }
 
@@ -461,7 +462,7 @@ void trigger3()
 void trigger4()
 {
   CurrentPage = 3;
-  DEBUG_PRINT(F("Nextion p3"));
+  Debug.print(DBG_VERBOSE,"Nextion p3");
   LastAction = millis();
 }
 
@@ -471,19 +472,10 @@ void trigger5()
 {
   TFTStruc.Mode = (boolean)myNex.readNumber(F("vabMode.val"));
   debounceM = 1;
-  DEBUG_PRINT(F("MODE button"));
-  if (TFTStruc.Mode)
-  {
-    String Cmd = F("{\"Mode\":1}");
-    queueIn.enqueue(Cmd);
-    DEBUG_PRINT(Cmd);
-  }
-  else
-  {
-    String Cmd = F("{\"Mode\":0}");
-    queueIn.enqueue(Cmd);
-    DEBUG_PRINT(Cmd);
-  }
+  Debug.print(DBG_VERBOSE,"MODE button");
+  String Cmd = TFTStruc.Mode ? F("{\"Mode\":1}") : F("{\"Mode\":0}");
+  queueIn.enqueue(Cmd);
+  Debug.print(DBG_VERBOSE,"Nextion Mode cmd: %s",Cmd);
   LastAction = millis();
 }
 
@@ -493,19 +485,10 @@ void trigger6()
 {
   TFTStruc.Filt = (boolean)myNex.readNumber(F("vabFilt.val"));
   debounceF = 1;
-  DEBUG_PRINT(F("FILT button"));
-  if (TFTStruc.Filt)
-  {
-    String Cmd = F("{\"FiltPump\":1}");
-    queueIn.enqueue(Cmd);
-    DEBUG_PRINT(Cmd);
-  }
-  else
-  {
-    String Cmd = F("{\"FiltPump\":0}");
-    queueIn.enqueue(Cmd);
-    DEBUG_PRINT(Cmd);
-  }
+  Debug.print(DBG_VERBOSE,"FILT button");
+  String Cmd = TFTStruc.Filt ? F("{\"FiltPump\":1}") : F("{\"FiltPump\":0}");
+  queueIn.enqueue(Cmd);
+  Debug.print(DBG_VERBOSE,"Nextion Filt command: %s",Cmd);
   LastAction = millis();
 }
 
@@ -515,19 +498,10 @@ void trigger7()
 {
   TFTStruc.Robot = (boolean)myNex.readNumber(F("vabRobot.val"));
   debounceH = 1;
-  DEBUG_PRINT(F("Robot button"));
-  if (TFTStruc.Robot)
-  {
-    String Cmd = F("{\"RobotPump\":1}");
-    queueIn.enqueue(Cmd);
-    DEBUG_PRINT(Cmd);
-  }
-  else
-  {
-    String Cmd = F("{\"RobotPump\":0}");
-    queueIn.enqueue(Cmd);
-    DEBUG_PRINT(Cmd);
-  }
+  Debug.print(DBG_VERBOSE,"Robot button");
+  String Cmd = TFTStruc.Robot ? F("{\"RobotPump\":1}") : F("{\"RobotPump\":0}");
+  queueIn.enqueue(Cmd);
+  Debug.print(DBG_VERBOSE,"Nextion Robot command: %s",Cmd);
   LastAction = millis();
 }
 
@@ -537,19 +511,10 @@ void trigger8()
 {
   TFTStruc.R0 = (boolean)myNex.readNumber(F("vabR0.val"));
   debounceR0 = 1;
-  DEBUG_PRINT(F("Relay 0 button"));
-  if (TFTStruc.R0)
-  {
-    String Cmd = F("{\"Relay\":[0,1]}");
-    queueIn.enqueue(Cmd);
-    DEBUG_PRINT(Cmd);
-  }
-  else
-  {
-    String Cmd = F("{\"Relay\":[0,0]}");
-    queueIn.enqueue(Cmd);
-    DEBUG_PRINT(Cmd);
-  }
+  Debug.print(DBG_VERBOSE,"Relay 0 button");
+  String Cmd = TFTStruc.R0 ? F("{\"Relay\":[0,1]}") : F("{\"Relay\":[0,0]}");
+  queueIn.enqueue(Cmd);
+  Debug.print(DBG_VERBOSE,"Nextion R0 command: %s",Cmd);
   LastAction = millis();
 }
 
@@ -559,19 +524,10 @@ void trigger9()
 {
   TFTStruc.R1 = (boolean)myNex.readNumber(F("vabR1.val"));
   debounceR1 = 1;
-  DEBUG_PRINT(F("Relay 1 button"));
-  if (TFTStruc.R1)
-  {
-    String Cmd = F("{\"Relay\":[1,1]}");
-    queueIn.enqueue(Cmd);
-    DEBUG_PRINT(Cmd);
-  }
-  else
-  {
-    String Cmd = F("{\"Relay\":[1,0]}");
-    queueIn.enqueue(Cmd);
-    DEBUG_PRINT(Cmd);
-  }
+  Debug.print(DBG_VERBOSE,"Relay 1 button");
+  String Cmd = TFTStruc.R1 ? F("{\"Relay\":[1,1]}") : F("{\"Relay\":[1,0]}");
+  queueIn.enqueue(Cmd);
+  Debug.print(DBG_VERBOSE,"Nextion R1 command: %s",Cmd);
   LastAction = millis();
 }
 
@@ -581,19 +537,10 @@ void trigger10()
 {
   TFTStruc.R2 = (boolean)myNex.readNumber(F("vabR2.val"));
   debounceR2 = 1;
-  DEBUG_PRINT(F("Relay 2 button"));
-  if (TFTStruc.R2)
-  {
-    String Cmd = F("{\"Relay\":[2,1]}");
-    queueIn.enqueue(Cmd);
-    DEBUG_PRINT(Cmd);
-  }
-  else
-  {
-    String Cmd = F("{\"Relay\":[2,0]}");
-    queueIn.enqueue(Cmd);
-    DEBUG_PRINT(Cmd);
-  }
+  Debug.print(DBG_VERBOSE,"Relay 2 button");
+  String Cmd = TFTStruc.R2 ? F("{\"Relay\":[2,1]}") : F("{\"Relay\":[2,0]}");
+  queueIn.enqueue(Cmd);
+  Debug.print(DBG_VERBOSE,"Nextion R2 command: %s",Cmd);
   LastAction = millis();
 }
 
@@ -601,10 +548,10 @@ void trigger10()
 //printh 23 02 54 0B
 void trigger11()
 {
-  DEBUG_PRINT("Calibration complete or new pH, Orp or Water Temp setpoints or new tank event");
+  Debug.print(DBG_VERBOSE,"Calibration complete or new pH, Orp or Water Temp setpoints or new tank event");
   String Cmd = myNex.readStr(F("pageCalibs.vaCommand.txt"));
   queueIn.enqueue(Cmd);
-  DEBUG_PRINT(Cmd);
+  Debug.print(DBG_VERBOSE,"Nextion cal page command: %s",Cmd);
   LastAction = millis();
 }
 
@@ -612,7 +559,7 @@ void trigger11()
 //printh 23 02 54 0C
 void trigger12()
 {
-  DEBUG_PRINT(F("Clear errors event"));
+  Debug.print(DBG_VERBOSE,"Clear errors event");
   String Cmd = F("{\"Clear\":1}");
   queueIn.enqueue(Cmd);
   LastAction = millis();
