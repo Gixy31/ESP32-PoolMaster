@@ -17,6 +17,10 @@ Compared to the initial project, the main differences are:
   A dedicated board has been designed to host all components. There are 8 LEDs at the bottom to display status, warnings and alarms.</p><br /><br />
   
 <p align="center"> <img src="/docs/PoolMaster_board.JPG" width="802" title="Board"> </p> <br /><br />  
+<p align="center"> <img src="/docs/Page 0.JPG" width="300" title=""> </p>
+<p align="center"> <img src="/docs/Page 1.JPG" width="300" title=""> </p>
+<p align="center"> <img src="/docs/Page 3.JPG" width="300" title=""> </p><br /><br />  
+ 
 
 
 <h2>PoolMaster 5.0.0</h2>
