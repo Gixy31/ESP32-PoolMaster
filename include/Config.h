@@ -10,8 +10,9 @@
 #define CHL_LEVEL       39
 #define PH_LEVEL        36
 
-//One wire bus for the water temperature measurement
-#define ONE_WIRE_BUS_A  19
+//One wire bus for the air/water temperature measurement
+#define ONE_WIRE_BUS_A  18
+#define ONE_WIRE_BUS_W  19
 
 //I2C bus for analog measurement with ADS1115 of pH, ORP and water pressure 
 //and status LED through PCF8574A 
@@ -29,7 +30,7 @@
 //OTA port
 #define OTA_PORT    8063
 
-//12bits (0,06°C) temperature sensor resolution
+//12bits (0,06°C) temperature sensors resolution
 #define TEMPERATURE_RESOLUTION 12
 
 //Version of config stored in EEPROM

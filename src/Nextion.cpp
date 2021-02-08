@@ -120,47 +120,61 @@ void UpdateTFT()
     }
   }
 
-  if (storage.PhValue != TFTStruc.pH)
+  if (storage.PhValue != TFTStruc.pH || !refresh)
   {
     TFTStruc.pH = storage.PhValue;
     myNex.writeStr(F("page0.vapH.txt"), String(TFTStruc.pH, 2));
     if (CurrentPage == 0)  myNex.writeStr(F("pH.txt"), String(TFTStruc.pH, 2));
   }
-  if (storage.OrpValue != TFTStruc.Orp)
+  if (storage.OrpValue != TFTStruc.Orp || !refresh)
   {
     TFTStruc.Orp = storage.OrpValue;
     myNex.writeStr(F("page0.vaOrp.txt"), String(TFTStruc.Orp, 0));
     if (CurrentPage == 0)  myNex.writeStr(F("Orp.txt"), String(TFTStruc.Orp, 0));
   }
-  if (storage.Ph_SetPoint != TFTStruc.pHSP)
+  if (storage.Ph_SetPoint != TFTStruc.pHSP || !refresh)
   {
     TFTStruc.pHSP = storage.Ph_SetPoint;
     temp = "(" + String(TFTStruc.pHSP, 1) + ")";
     myNex.writeStr(F("page0.vapHSP.txt"), temp);
     if (CurrentPage == 0)  myNex.writeStr(F("pHSP.txt"), temp);
   }
-  if (storage.Orp_SetPoint != TFTStruc.OrpSP)
+  if (storage.Orp_SetPoint != TFTStruc.OrpSP || !refresh)
   {
     TFTStruc.OrpSP = storage.Orp_SetPoint;
     temp = "(" + String((int)TFTStruc.OrpSP) + ")";
     myNex.writeStr(F("page0.vaOrpSP.txt"), temp);
     if (CurrentPage == 0)  myNex.writeStr(F("OrpSP.txt"), temp);
   }
-  if (storage.TempValue != TFTStruc.WT)
+  if (PhPID.GetMode() != TFTStruc.PIDpH || !refresh)
+  {
+    TFTStruc.PIDpH = PhPID.GetMode();
+    temp = (TFTStruc.PIDpH == 1) ? F("PID") : F("---");
+    myNex.writeStr(F("page0.vapHP.txt"), temp);
+    if (CurrentPage == 0)  myNex.writeStr(F("pHP.txt"), temp);
+  }
+  if (OrpPID.GetMode() != TFTStruc.PIDChl || !refresh)
+  {
+    TFTStruc.PIDChl = OrpPID.GetMode();
+    temp = (TFTStruc.PIDChl == 1) ? F("PID") : F("---");
+    myNex.writeStr(F("page0.vaChlP.txt"), temp);
+    if (CurrentPage == 0)  myNex.writeStr(F("ChlP.txt"), temp);
+  }
+  if (storage.TempValue != TFTStruc.WT || !refresh)
   {
     TFTStruc.WT = storage.TempValue;
     temp = String(TFTStruc.WT, 1) + (char)176 + F("C");
     myNex.writeStr(F("page0.vaWT.txt"), temp);
     if (CurrentPage == 0)  myNex.writeStr(F("W.txt"), temp);
   }
-  if (storage.TempExternal != TFTStruc.AT)
+  if (storage.TempExternal != TFTStruc.AT || !refresh)
   {
     TFTStruc.AT = storage.TempExternal;
     temp = String(TFTStruc.AT, 1) + (char)176 + F("C");
     myNex.writeStr(F("page0.vaAT.txt"), temp);
     if (CurrentPage == 0)  myNex.writeStr(F("A.txt"), temp);
   }
-  if (storage.PSIValue != TFTStruc.PSI)
+  if (storage.PSIValue != TFTStruc.PSI || !refresh)
   {
     TFTStruc.PSI = storage.PSIValue;
     temp = String(TFTStruc.PSI, 2) + F("b");
@@ -168,7 +182,7 @@ void UpdateTFT()
     if (CurrentPage == 0)  myNex.writeStr(F("P.txt"), temp);
   }
 
-  if ((storage.FiltrationStop != TFTStruc.FSto) || (storage.FiltrationStart != TFTStruc.FSta))
+  if ((storage.FiltrationStop != TFTStruc.FSto) || (storage.FiltrationStart != TFTStruc.FSta) || !refresh)
   {
     TFTStruc.FSto = storage.FiltrationStop;
     TFTStruc.FSta = storage.FiltrationStart;
@@ -180,7 +194,7 @@ void UpdateTFT()
     else if (CurrentPage == 3)  myNex.writeStr(F("page3.p3StaSto.txt"), temp);
   }
 
-  if ((ChlPump.UpTime != TFTStruc.OrpPpRT) || ((int)(storage.ChlFill - ChlPump.GetTankUsage()) != TFTStruc.OrpTkFill))
+  if ((ChlPump.UpTime != TFTStruc.OrpPpRT) || ((int)(storage.ChlFill - ChlPump.GetTankUsage()) != TFTStruc.OrpTkFill) || !refresh)
   {
     TFTStruc.OrpPpRT = ChlPump.UpTime;
     TFTStruc.OrpTkFill = (int)round((storage.ChlFill - ChlPump.GetTankUsage()));
@@ -190,7 +204,7 @@ void UpdateTFT()
     if (CurrentPage == 0)  myNex.writeStr(F("OrpTk.txt"), temp);
   }
 
-  if ((PhPump.UpTime != TFTStruc.pHPpRT) || ((int)(storage.AcidFill - PhPump.GetTankUsage()) != TFTStruc.pHTkFill))
+  if ((PhPump.UpTime != TFTStruc.pHPpRT) || ((int)(storage.AcidFill - PhPump.GetTankUsage()) != TFTStruc.pHTkFill) || !refresh)
   {
     TFTStruc.pHPpRT = PhPump.UpTime;
     TFTStruc.pHTkFill = (int)round((storage.AcidFill - PhPump.GetTankUsage()));
@@ -424,14 +438,6 @@ void trigger1()
   Debug.print(DBG_VERBOSE,"Nextion p0");
   if(!TFT_ON)
   {
-    TFTStruc =
-    { //default values to force update on next refresh
-      -1., -1., -1., -1., -1., -1., -1., -1.,
-      0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      99, 99,
-      ""
-    };
     UpdateWiFi(WiFi.status() == WL_CONNECTED);
     TFT_ON = true;  
     refresh = false;
@@ -561,6 +567,26 @@ void trigger12()
 {
   Debug.print(DBG_VERBOSE,"Clear errors event");
   String Cmd = F("{\"Clear\":1}");
+  queueIn.enqueue(Cmd);
+  LastAction = millis();
+}
+
+//pH PID button pressed
+//printh 23 02 54 0D
+void trigger13()
+{
+  Debug.print(DBG_VERBOSE,"pH PID event");
+  String Cmd = (TFTStruc.PIDpH == 1) ? F("{\"PhPID\":0}") : F("{\"PhPID\":1}");
+  queueIn.enqueue(Cmd);
+  LastAction = millis();
+}
+
+//Orp PID button pressed
+//printh 23 02 54 0E
+void trigger14()
+{
+  Debug.print(DBG_VERBOSE,"Orp PID event");
+  String Cmd = (TFTStruc.PIDChl == 1) ? F("{\"OrpPID\":0}") : F("{\"OrpPID\":1}");
   queueIn.enqueue(Cmd);
   LastAction = millis();
 }

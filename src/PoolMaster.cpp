@@ -138,11 +138,11 @@ StoreStruct storage =
 { 
   CONFIG_VERSION,
   0, 0, 1,
-  12, 8, 22, 8, 22, 0,
+  12, 8, 22, 8, 22, 10,
   1800, 1800, 30000,
   1200000, 1200000, 0, 0,
-  7.3, 750.0, 0.5, 0.25, 10.0, 27.0, 3.0, 3.507951, -1.923527, -972.741849, 2477.392837, 1.0, 0.0,
-  2250000.0, 0.0, 0.0, 18000.0, 0.0, 0.0, 0.0, 0.0, 28.0, 0.0, 0.0, 0.4,
+  7.3, 750.0, 1.8, 0.75, 10.0, 18.0, 3.0, 3.507951, -1.923527, -972.741849, 2477.392837, 1.0, 0.0,
+  2250000.0, 0.0, 0.0, 18000.0, 0.0, 0.0, 0.0, 0.0, 28.0, 7.3, 750., 1.3,
   100.0, 100.0, 20.0, 20.0, 1.5, 1.5
 };
 
@@ -151,12 +151,15 @@ tm timeinfo;
 // Queue object to store incoming JSON commands (up to 10)
 ArduinoQueue<String> queueIn(QUEUE_SIZE_ITEMS, QUEUE_SIZE_BYTES);
 
-// Setup a oneWire instance to communicate with any OneWire devices
+// Setup oneWire instances to communicate with temperature sensors (one bus per sensor)
+OneWire oneWire_W(ONE_WIRE_BUS_W);
 OneWire oneWire_A(ONE_WIRE_BUS_A);
 // Pass our oneWire reference to Dallas Temperature library instance
+DallasTemperature sensors_W(&oneWire_W);
 DallasTemperature sensors_A(&oneWire_A);
 // MAC Address of DS18b20 water temperature sensor
-DeviceAddress DS18b20_0 = { 0x28, 0x9F, 0x24, 0x24, 0x0C, 0x0, 0x0, 0xA9 };
+DeviceAddress DS18B20_W = { 0x28, 0x9F, 0x24, 0x24, 0x0C, 0x0, 0x0, 0xA9 };
+DeviceAddress DS18B20_A = { 0x28, 0x9F, 0x24, 0x24, 0x0C, 0x0, 0x0, 0xA9 };
 
 // Setup an ADS1115 instance for pressure measurements
 ADS1115Scanner adc(0x48);  // Address 0x48 is the default
@@ -188,10 +191,11 @@ bool d_calc = false;                            // Filtration duration computed
 bool cleaning_done = false;                     // daily cleaning done 
 
 // Signal filtering library. 
-RunningMedian samples_Temp = RunningMedian(11);
-RunningMedian samples_Ph   = RunningMedian(11);
-RunningMedian samples_Orp  = RunningMedian(11);
-RunningMedian samples_PSI  = RunningMedian(5);
+RunningMedian samples_WTemp = RunningMedian(11);
+RunningMedian samples_ATemp = RunningMedian(11);
+RunningMedian samples_Ph    = RunningMedian(11);
+RunningMedian samples_Orp   = RunningMedian(11);
+RunningMedian samples_PSI   = RunningMedian(5);
 
 //Date-Time variables
 char TimeBuffer[25];
@@ -272,13 +276,13 @@ void setup()
 
     if (vers == CONFIG_VERSION)
     {
-      Debug.print(DBG_NONE,"Same version: %d / %d. Loading settings from NVS",vers,CONFIG_VERSION);
-      if(loadConfig()) Debug.print(DBG_NONE,"Config loaded"); //Restore stored values from NVS
+      Debug.print(DBG_INFO,"Same version: %d / %d. Loading settings from NVS",vers,CONFIG_VERSION);
+      if(loadConfig()) Debug.print(DBG_INFO,"Config loaded"); //Restore stored values from NVS
     }
     else
     {
-      Debug.print(DBG_NONE,"New version: %d / %d. Loading new default settings",vers,CONFIG_VERSION);      
-      if(saveConfig()) Debug.print(DBG_NONE,"Config saved");  //First time use. Save new default values to NVS
+      Debug.print(DBG_INFO,"New version: %d / %d. Loading new default settings",vers,CONFIG_VERSION);      
+      if(saveConfig()) Debug.print(DBG_INFO,"Config saved");  //First time use. Save new default values to NVS
     }
 
   } else {
@@ -351,7 +355,7 @@ void setup()
   StartTime();
   readLocalTime();
   setTime(timeinfo.tm_hour,timeinfo.tm_min,timeinfo.tm_sec,timeinfo.tm_mday,timeinfo.tm_mon+1,timeinfo.tm_year-100);
-  Debug.print(DBG_NONE,"%d/%02d/%02d %02d:%02d:%02d",year(),month(),day(),hour(),minute(),second());
+  Debug.print(DBG_INFO,"%d/%02d/%02d %02d:%02d:%02d",year(),month(),day(),hour(),minute(),second());
 
   // Initialize the mDNS library.
   while (!MDNS.begin("PoolMaster")) {
@@ -360,7 +364,7 @@ void setup()
   }
   MDNS.addService("http", "tcp", SERVER_PORT);
 
-  //Start temperature measurement state machine
+  //Start temperatures measurement state machine
   gettemp.next(gettemp_start);
 
   // Start I2C and ADS1115 for analog measurements in asynchronous mode
@@ -444,10 +448,10 @@ void setup()
       type = "sketch";
     else // U_SPIFFS
       type = "filesystem";
-    Debug.print(DBG_NONE,"Start updating %s",type);
+    Debug.print(DBG_INFO,"Start updating %s",type);
   });
   ArduinoOTA.onEnd([]() {
-  Debug.print(DBG_NONE,"End");
+  Debug.print(DBG_INFO,"End");
   });
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
     esp_task_wdt_reset();           // reset Watchdog as upload may last some time...
@@ -561,16 +565,21 @@ void GenericCallback(Task* me)
     DoneForTheDay = false;
   }
 
-  // compute next Filtering duration and stop time (in hours) at 15 (to filter during the hotest 
-  // period of the day))
+  // Compute next Filtering duration and start/stop hours at 15:00 (to filter during the hotest period of the day)
+  // Depending on water temperature, the filtration duration is either 2 hours, temp/3 or temp/2 hours.
   #ifdef DEBUG
   if (second() == 0 && !d_calc)
   #else
   if (hour() == 15 && !d_calc)
   #endif
   {
-    storage.FiltrationDuration = round(storage.TempValue / 2.);
-    if (storage.FiltrationDuration < 3) storage.FiltrationDuration = 3;    
+    if (storage.TempValue < storage.WaterTempLowThreshold){
+        storage.FiltrationDuration = 2;}
+    else if (storage.TempValue >= storage.WaterTempLowThreshold && storage.TempValue < storage.WaterTemp_SetPoint){
+        storage.FiltrationDuration = round(storage.TempValue / 3.);}
+    else if (storage.TempValue >= storage.WaterTemp_SetPoint){
+        storage.FiltrationDuration = round(storage.TempValue / 2.);}
+  
     storage.FiltrationStart = 15 - (int)round(storage.FiltrationDuration / 2.);
     if (storage.FiltrationStart < storage.FiltrationStartMin)
       storage.FiltrationStart = storage.FiltrationStartMin;    
@@ -581,8 +590,8 @@ void GenericCallback(Task* me)
     saveParam("FiltrStart",storage.FiltrationStart);  
     saveParam("FiltrStop",storage.FiltrationStop);  
 
-    Debug.print(DBG_INFO,"Filtration: %d",storage.FiltrationDuration);
-    Debug.print(DBG_INFO,"Start: %d Stop: %d",storage.FiltrationStart,storage.FiltrationStop);
+    Debug.print(DBG_INFO,"Filtration duration: %dh",storage.FiltrationDuration);
+    Debug.print(DBG_INFO,"Start: %dh - Stop: %dh",storage.FiltrationStart,storage.FiltrationStop);
 
     d_calc = true;
   }
@@ -643,13 +652,21 @@ void GenericCallback(Task* me)
     AntiFreezeFiltering = false;
   }
 
-  //If filtration pump has been running for over 7secs but pressure is still low, stop the filtration pump, something is wrong, set error flag
-  if (FiltrationPump.IsRunning() && ((millis() - FiltrationPump.LastStartTime) > 7000) && (storage.PSIValue < storage.PSI_MedThreshold))
+  //If filtration pump has been running for over 30secs but pressure is still low, stop the filtration pump, something is wrong, set error flag
+  if (FiltrationPump.IsRunning() && ((millis() - FiltrationPump.LastStartTime) > 30000) && (storage.PSIValue < storage.PSI_MedThreshold))
   {
     FiltrationPump.Stop();
     PSIError = true;
     mqttErrorPublish("PSI Error");
   }  
+
+  // Over-pressure error
+  if (storage.PSIValue > storage.PSI_HighThreshold)
+  {
+    FiltrationPump.Stop();
+    PSIError = true;
+    mqttErrorPublish("PSI Error");
+  } 
 
   //UPdate Nextion TFT
   UpdateTFT();
@@ -730,13 +747,13 @@ void SetPhPID(bool Enable)
     PhPump.ClearErrors();
     storage.PhPIDOutput = 0.0;
     storage.PhPIDwindowStartTime = millis();
-    PhPID.SetMode(1);
+    PhPID.SetMode(AUTOMATIC);
     storage.Ph_RegulationOnOff = 1;
   }
   else
   {
     //Stop PhPID
-    PhPID.SetMode(0);
+    PhPID.SetMode(MANUAL);
     storage.Ph_RegulationOnOff = 0;
     storage.PhPIDOutput = 0.0;
     PhPump.Stop();
@@ -752,14 +769,14 @@ void SetOrpPID(bool Enable)
     ChlPump.ClearErrors();
     storage.OrpPIDOutput = 0.0;
     storage.OrpPIDwindowStartTime = millis();
-    OrpPID.SetMode(1);
+    OrpPID.SetMode(AUTOMATIC);
     storage.Orp_RegulationOnOff = 1;
 
   }
   else
   {
     //Stop OrpPID
-    OrpPID.SetMode(0);
+    OrpPID.SetMode(MANUAL);
     storage.Orp_RegulationOnOff = 0;
     storage.OrpPIDOutput = 0.0;
     ChlPump.Stop();
@@ -1004,12 +1021,21 @@ int freeRam () {
 void gettemp_start()
 {
   // Start up the library
+  sensors_W.begin();
   sensors_A.begin();
 
+  Debug.print(DBG_INFO,"1wire W devices: %d device(s) found",sensors_W.getDeviceCount());
+  Debug.print(DBG_INFO,"1wire A devices: %d device(s) found",sensors_A.getDeviceCount());
+
+  if (!sensors_W.getAddress(DS18B20_W, 0)) Debug.print(DBG_ERROR,"Unable to find address for bus W");
+  if (!sensors_A.getAddress(DS18B20_A, 0)) Debug.print(DBG_ERROR,"Unable to find address for bus A");  
+
   // set the resolution
-  sensors_A.setResolution(DS18b20_0, TEMPERATURE_RESOLUTION);
+  sensors_W.setResolution(DS18B20_W, TEMPERATURE_RESOLUTION);
+  sensors_A.setResolution(DS18B20_A, TEMPERATURE_RESOLUTION);
 
   //don't wait ! Asynchronous mode
+  sensors_W.setWaitForConversion(false);
   sensors_A.setWaitForConversion(false);
 
   gettemp.next(gettemp_request);
@@ -1018,6 +1044,7 @@ void gettemp_start()
 //Request temperature asynchronously
 void gettemp_request()
 {
+  sensors_W.requestTemperatures();
   sensors_A.requestTemperatures();
   gettemp.next(gettemp_wait);
 }
@@ -1030,17 +1057,25 @@ void gettemp_wait()
 }
 
 //read and print temperature measurement
-//in case of reading error, the buffer is not updated and the last value is returned
+//in case of reading error, the buffer is not updated and the last value is kept
 void gettemp_read()
 {
-  storage.TempValue = sensors_A.getTempC(DS18b20_0);
-  if (storage.TempValue == NAN || storage.TempValue == -127) {
-    Debug.print(DBG_WARNING,"Error getting temperature from DS18b20_0");
-    storage.TempValue = 28;
-  }  
-  samples_Temp.add(storage.TempValue);
-  storage.TempValue = samples_Temp.getAverage(5);
-  Debug.print(DBG_DEBUG,"DS18b20_0: %6.2f°C",storage.TempValue);
+  double temp = sensors_W.getTempC(DS18B20_W);
+  if (temp == NAN || temp == -127) {
+    Debug.print(DBG_WARNING,"Error getting Water temperature");
+  }  else storage.TempValue = temp;
+  samples_WTemp.add(storage.TempValue);
+  storage.TempValue = samples_WTemp.getAverage(5);
+  Debug.print(DBG_DEBUG,"DS18B20_W: %6.2f°C",storage.TempValue);
+
+  temp = sensors_A.getTempC(DS18B20_A);
+  if (temp == NAN || temp == -127) {
+    Debug.print(DBG_WARNING,"Error getting Air temperature");
+  }  else storage.TempExternal = temp;
+  samples_ATemp.add(storage.TempExternal);
+  storage.TempExternal = samples_ATemp.getAverage(5);
+  Debug.print(DBG_DEBUG,"DS18B20_A: %6.2f°C",storage.TempExternal);
+
   gettemp.next(gettemp_request);
 }
 

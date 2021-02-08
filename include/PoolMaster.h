@@ -1,7 +1,7 @@
 #pragma once
 #define ARDUINOJSON_USE_DOUBLE 1  // Required to force ArduinoJSON to treat float as double
 //#define DEBUG                   // Comment this line to deactivate some code dedicated to debug
-#define DEBUG_LEVEL DBG_DEBUG     // Possible levels : NONE/ERROR/WARNING/INFO/DEBUG/VERBOSE
+#define DEBUG_LEVEL DBG_INFO      // Possible levels : NONE/ERROR/WARNING/INFO/DEBUG/VERBOSE
 
 #include "Arduino_DebugUtils.h"
 

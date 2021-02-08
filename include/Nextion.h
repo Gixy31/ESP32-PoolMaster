@@ -15,14 +15,14 @@ uint8_t debounceR2 = 0;
 struct TFTStruct
 {
   float pH, Orp, pHSP, OrpSP, WT, WTSP, AT, PSI;
-  uint8_t FSta, FSto, pHTkFill, OrpTkFill;
+  uint8_t FSta, FSto, pHTkFill, OrpTkFill, PIDpH, PIDChl;
   boolean Mode, NetW, Filt, Robot, R0, R1, R2, pHUTErr, ChlUTErr, PSIErr, pHTLErr, ChlTLErr;
   unsigned long pHPpRT, OrpPpRT;
   String FW;
 } TFTStruc =
 { //default values to force update on next refresh
   -1., -1., -1., -1., -1., -1., -1., -1.,
-  0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   99, 99,
   ""
