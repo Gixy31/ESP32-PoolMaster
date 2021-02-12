@@ -131,7 +131,7 @@ void onMqttConnect(bool sessionPresent){
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason){
-  Debug.print(DBG_INFO,"Disconnected from MQTT");
+  Debug.print(DBG_WARNING,"Disconnected from MQTT");
   if(WiFi.isConnected()) xTimerStart(mqttReconnectTimer,0);
   MQTTConnection = false;
 }
@@ -145,7 +145,7 @@ void onMqttUnSubscribe(uint16_t packetId){
 }
 
 void onMqttPublish(uint16_t packetId){
-    Debug.print(DBG_INFO,"Publish ack., packetId: %d",packetId);
+    Debug.print(DBG_VERBOSE,"Publish ack., packetId: %d",packetId);
 }
 
 // MQTT callback
@@ -245,10 +245,9 @@ void PublishSettings()
   if (mqttClient.connected())
   {
     //send a JSON to MQTT broker. /!\ Split JSON if longer than 100 bytes
-    const int capacity = JSON_OBJECT_SIZE(8);
+    const int capacity = JSON_OBJECT_SIZE(6);
     StaticJsonDocument<capacity> root;
 
-    root["TE"]    = storage.TempExternal * 100;        // /!\ x100
     root["pHC0"]  = storage.pHCalibCoeffs0;            //pH sensor calibration coefficient C0
     root["pHC1"]  = storage.pHCalibCoeffs1;            //pH sensor calibration coefficient C1
     root["OrpC0"] = storage.OrpCalibCoeffs0;           //Orp sensor calibration coefficient C0
@@ -355,9 +354,10 @@ void PublishDataCallback(Task* me)
   {
     //send a JSON to MQTT broker. /!\ Split JSON if longer than 100 bytes
     //Will publish something like {"Tmp":818,"pH":321,"PSI":56,"Orp":583,"FilUpT":8995,"PhUpT":0,"ChlUpT":0}
-    const int capacity = JSON_OBJECT_SIZE(6);
+    const int capacity = JSON_OBJECT_SIZE(7);
     StaticJsonDocument<capacity> root;
 
+    root["TE"]      = storage.TempExternal * 100;        // /!\ x100
     root["Tmp"]     = storage.TempValue * 100;
     root["pH"]      = storage.PhValue * 100;
     root["PSI"]     = storage.PSIValue * 100;

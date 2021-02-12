@@ -158,8 +158,8 @@ OneWire oneWire_A(ONE_WIRE_BUS_A);
 DallasTemperature sensors_W(&oneWire_W);
 DallasTemperature sensors_A(&oneWire_A);
 // MAC Address of DS18b20 water temperature sensor
-DeviceAddress DS18B20_W = { 0x28, 0x9F, 0x24, 0x24, 0x0C, 0x0, 0x0, 0xA9 };
-DeviceAddress DS18B20_A = { 0x28, 0x9F, 0x24, 0x24, 0x0C, 0x0, 0x0, 0xA9 };
+DeviceAddress DS18B20_W = { 0x28, 0x9F, 0x24, 0x24, 0x0C, 0x00, 0x00, 0xA9 };
+DeviceAddress DS18B20_A = { 0x28, 0xB0, 0x70, 0x75, 0xD0, 0x01, 0x3C, 0x9D };
 
 // Setup an ADS1115 instance for pressure measurements
 ADS1115Scanner adc(0x48);  // Address 0x48 is the default
@@ -184,7 +184,7 @@ PID OrpPID(&storage.OrpValue, &storage.OrpPIDOutput, &storage.Orp_SetPoint, stor
 bool PhLevelError = 0;                          // PH tank level alarm
 bool ChlLevelError = 0;                         // Cl tank level alarm
 bool EmergencyStopFiltPump = 0;                 // flag will be (re)set by double-tapp button
-bool PSIError = 0;                              // Water pressure low
+bool PSIError = false;                          // Water pressure OK
 bool AntiFreezeFiltering = false;               //Filtration anti freeze mod
 bool DoneForTheDay = false;                     // Reset actions done once per day
 bool d_calc = false;                            // Filtration duration computed
@@ -488,25 +488,25 @@ void StatusLightsCallback(Task* me)
   uint8_t status;
 
   status = 0;
-  status |= (line & 1) << 6;
+  status |= (line & 1) << 1;
   if(line == 0)
   {
     line = 1;
-    status |= (storage.AutoMode & 1) << 5;
-    status |= (AntiFreezeFiltering & 1) << 4;
-    status |= (PSIError & 1) << 0;
+    status |= (storage.AutoMode & 1) << 2;
+    status |= (AntiFreezeFiltering & 1) << 3;
+    status |= (PSIError & 1) << 7;
   } else
   {
     line = 0;
-    status |= (PhPID.GetMode() & 1) << 5;
-    status |= (OrpPID.GetMode() & 1) << 4;
-    status |= (!PhPump.TankLevel() & 1) << 3;
-    status |= (!ChlPump.TankLevel() & 1) << 2;
-    status |= (PhPump.UpTimeError & 1) << 1;
-    status |= (ChlPump.UpTimeError & 1) << 0;  
+    status |= (PhPID.GetMode() & 1) << 2;
+    status |= (OrpPID.GetMode() & 1) << 3;
+    status |= (!PhPump.TankLevel() & 1) << 4;
+    status |= (!ChlPump.TankLevel() & 1) << 5;
+    status |= (PhPump.UpTimeError & 1) << 6;
+    status |= (ChlPump.UpTimeError & 1) << 7;  
   }
-  (status & 0x0F) ? digitalWrite(BUZZER,HIGH) : digitalWrite(BUZZER,LOW) ;
-  if(WiFi.status() == WL_CONNECTED) status |= 0x80;
+  (status & 0xF0) ? digitalWrite(BUZZER,HIGH) : digitalWrite(BUZZER,LOW) ;
+  if(WiFi.status() == WL_CONNECTED) status |= 0x01;
     else status |= 0x00;
   Debug.print(DBG_VERBOSE,"Status LED : 0x%02x",status);  
   Wire.beginTransmission(0x38);
@@ -602,8 +602,6 @@ void GenericCallback(Task* me)
   //start filtration pump as scheduled
   if (!EmergencyStopFiltPump && !FiltrationPump.IsRunning() && storage.AutoMode && !PSIError && hour() >= storage.FiltrationStart && hour() < storage.FiltrationStop )
     FiltrationPump.Start();
-  
-  PSIError = 0;
 
   //start cleaning robot for 2 hours 30mn after filtration start
   if (FiltrationPump.IsRunning() && storage.AutoMode && !RobotPump.IsRunning() && ((millis() - FiltrationPump.LastStartTime) / 1000 / 60) >= 30 && !cleaning_done)
@@ -666,7 +664,8 @@ void GenericCallback(Task* me)
     FiltrationPump.Stop();
     PSIError = true;
     mqttErrorPublish("PSI Error");
-  } 
+  } else if(storage.PSIValue >= storage.PSI_MedThreshold)
+    PSIError = false;
 
   //UPdate Nextion TFT
   UpdateTFT();
@@ -1022,13 +1021,30 @@ void gettemp_start()
 {
   // Start up the library
   sensors_W.begin();
+  sensors_W.begin(); //Work-around of a OneWire library bug for enumeration
   sensors_A.begin();
 
   Debug.print(DBG_INFO,"1wire W devices: %d device(s) found",sensors_W.getDeviceCount());
   Debug.print(DBG_INFO,"1wire A devices: %d device(s) found",sensors_A.getDeviceCount());
 
   if (!sensors_W.getAddress(DS18B20_W, 0)) Debug.print(DBG_ERROR,"Unable to find address for bus W");
+    else {
+      Serial.printf("DS18B20_W: ");
+      for(uint8_t i=0;i<8;i++){
+        Serial.printf("%02x",DS18B20_W[i]);
+        if(i<7) Serial.print(":");
+          else Serial.printf("\r\n");
+      }
+    }  
   if (!sensors_A.getAddress(DS18B20_A, 0)) Debug.print(DBG_ERROR,"Unable to find address for bus A");  
+    else {
+      Serial.printf("DS18B20_A: ");
+      for(uint8_t i=0;i<8;i++){
+        Serial.printf("%02x",DS18B20_A[i]);
+        if(i<7) Serial.print(":");
+          else Serial.printf("\r\n");
+      }
+    } 
 
   // set the resolution
   sensors_W.setResolution(DS18B20_W, TEMPERATURE_RESOLUTION);
