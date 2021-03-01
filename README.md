@@ -20,7 +20,7 @@ Compared to the initial project, the main differences are:
   app_CPU :
   - The Arduino loopTask, with only the setup() function. When the setup is finished, the task deletes itself to recover memory;
   - PoolMaster, running every 700ms, which mainly supervises the overall timing of the system;
-  - ADS1115, running every 125ms, to acquire analog measurements of pH, ORP and Pressure with an ADS115 sensor on an I2C bus;
+  - AnalogPoll, running every 125ms, to acquire analog measurements of pH, ORP and Pressure with an ADS115 sensor on an I2C bus;
   - GetTemp, running every 1000ms, to acquire water and air temperatures with DS18B20 sensors on two 1Wire busses;
   - ORPRegulation, running every 1100ms, to manage Chlorine pump;
   - pHRegulation, running every 1300ms, to manage Acid/Soda pump;
