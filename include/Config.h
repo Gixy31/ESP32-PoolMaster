@@ -4,7 +4,6 @@
 #define CHL_PUMP        26
 #define RELAY_R0        27   // Projecteur
 #define RELAY_R1         4   // Spare, not connected
-#define RELAY_R2         4   // non existing
 
 //Digital input pins connected to Acid and Chl tank level reed switches
 #define CHL_LEVEL       39
@@ -35,9 +34,7 @@
 
 //Version of config stored in EEPROM
 //Random value. Change this value (to any other value) to revert the config to default values
-#define CONFIG_VERSION 2
-
-#define _endl "\n"
+#define CONFIG_VERSION 6
 
 //MQTT stuff including local broker/server IP address, login and pwd
 //------------------------------------------------------------------

@@ -1,22 +1,16 @@
 #pragma once
 #define ARDUINOJSON_USE_DOUBLE 1  // Required to force ArduinoJSON to treat float as double
-//#define DEBUG                   // Comment this line to deactivate some code dedicated to debug
-#define DEBUG_LEVEL DBG_INFO      // Possible levels : NONE/ERROR/WARNING/INFO/DEBUG/VERBOSE
+#define DEBUG_LEVEL DBG_DEBUG     // Possible levels : NONE/ERROR/WARNING/INFO/DEBUG/VERBOSE
 
-#include "Arduino_DebugUtils.h"
-
+#include "Arduino_DebugUtils.h"   // Debug.print
 #include <time.h>                 // Struct and function declarations for dealing with time
 #include "TimeLib.h"              // Low level time and date functions
 #include <RunningMedian.h>        // Determine the running median by means of a circular buffer
-#include <SoftTimer.h>            // Event based timeshare library (+ PciManager dependence)
-#include <yasm.h>                 // Async. state machine
 #include <PID_v1.h>               // PID regulation loop
-#include <Streaming.h>            // Streaming operator (<<) macros 
 #include "OneWire.h"              // Onewire communication
 #include <Wire.h>                 // Two wires / I2C library
 #include <stdlib.h>               // Definitions for common types, variables, and functions
 #include <ArduinoJson.h>          // JSON library
-#include "ArduinoQueue.h"         // A lightweight linked list type queue library
 #include <Pump.h>                 // Simple library to handle home-pool filtration and peristaltic pumps
 #include <DallasTemperature.h>    // Maxim (Dallas DS18B20) Temperature temperature sensor library
 #include <MQTT.h>                 // MQTT library
@@ -25,7 +19,6 @@
 #include <WiFi.h>                 // ESP32 Wifi support
 #include <WiFiClient.h>           // Base class that provides Client
 #include <WiFiUdp.h>              // UDP support
-#include <WiFiMulti.h>            // Multiple WiFi access points 
 #include <ESPmDNS.h>              // mDNS
 #include <ArduinoOTA.h>           // On The Air WiFi update 
 #include "AsyncMqttClient.h"      // Async. MQTT client
@@ -35,7 +28,7 @@
 struct StoreStruct
 {
   uint8_t ConfigVersion;   // This is for testing if first time using eeprom or not
-  bool Ph_RegulationOnOff, Orp_RegulationOnOff, AutoMode;
+  bool Ph_RegulationOnOff, Orp_RegulationOnOff, AutoMode, WinterMode;
   uint8_t FiltrationDuration, FiltrationStart, FiltrationStop, FiltrationStartMin, FiltrationStopMax, DelayPIDs;
   unsigned long PhPumpUpTimeLimit, ChlPumpUpTimeLimit,PublishPeriod;
   unsigned long PhPIDWindowSize, OrpPIDWindowSize, PhPIDwindowStartTime, OrpPIDwindowStartTime;
@@ -47,9 +40,9 @@ struct StoreStruct
 extern StoreStruct storage;
 
 //Queue object to store incoming JSON commands (up to 10)
-#define QUEUE_SIZE_ITEMS 10
-#define QUEUE_SIZE_BYTES 1000
-extern ArduinoQueue<String> queueIn;
+#define QUEUE_ITEMS_NBR 10
+#define QUEUE_ITEM_SIZE 100
+extern QueueHandle_t queueIn;
 
 //The four pumps of the system (instanciate the Pump class)
 //In this case, all pumps start/Stop are managed by relays
@@ -65,8 +58,18 @@ extern PID OrpPID;
 
 extern bool PSIError;
 
+extern tm timeinfo;
+
 // Firmware revision
 extern String Firmw;
 
-extern bool MQTTConnection;
-extern bool EmergencyStopFiltPump;
+extern AsyncMqttClient mqttClient;                     // MQTT async. client
+
+// Various flags
+extern bool startTasks;                                // flag to start loop tasks       
+extern bool MQTTConnection;                            // MQTT connected flag
+extern bool EmergencyStopFiltPump;                     // Filtering pump stopped manually; needs to be cleared to restart
+extern bool AntiFreezeFiltering;                       // Filtration anti freeze mode
+extern bool PhLevelError;                              // PH tank level alarm
+extern bool ChlLevelError;                             // Cl tank level alarm
+extern bool PSIError;                                  // Water pressure alarm

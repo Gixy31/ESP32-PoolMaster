@@ -3,6 +3,8 @@
   The trigger(s) functions at the end are called by the Nextion library on event (buttons, page change).
 
   (c) Loic74 <loic74650@gmail.com> 2018-2020
+
+  Modified to implement display sleep mode.
 */
 
 #include <Arduino.h>
@@ -10,12 +12,12 @@
 #include "PoolMaster.h"
 #include "Nextion.h"
 
-String temp;
-bool TFT_ON = true;
-bool refresh = false;
-// Last action time done on TFT. Go to sleep after TFT_SLEEP
-unsigned long LastAction = 0;
+static String temp;
+static bool TFT_ON = true;           // display status
+static bool refresh = false;         // flag to force display refresh
+static unsigned long LastAction = 0; // Last action time done on TFT. Go to sleep after TFT_SLEEP
 
+// Functions prototypes
 void InitTFT(void);
 void ResetTFT(void);
 void UpdateTFT(void);
@@ -324,17 +326,16 @@ void UpdateTFT()
       debounceR1++;
   }
 
-  if (digitalRead(RELAY_R2) != TFTStruc.R2 || !refresh)
+  if (storage.WinterMode != TFTStruc.R2 || !refresh)
   {
     if ((debounceR2 == 0) || (debounceR2 > debounceCount))
     {
       debounceR2 = 0;
-      TFTStruc.R2 = digitalRead(RELAY_R2);
-
-      myNex.writeNum(F("page1.vabR2.val"), !TFTStruc.R2);
+      TFTStruc.R2 = storage.WinterMode;
+      myNex.writeNum(F("page1.vabR2.val"), TFTStruc.R2);
       if (CurrentPage == 1)
       {
-        if (TFTStruc.R2 == 0)
+        if (TFTStruc.R2 == 1)
           myNex.writeStr(F("bR2.pic=8"));
         else
           myNex.writeStr(F("bR2.pic=7"));
@@ -479,8 +480,9 @@ void trigger5()
   TFTStruc.Mode = (boolean)myNex.readNumber(F("vabMode.val"));
   debounceM = 1;
   Debug.print(DBG_VERBOSE,"MODE button");
-  String Cmd = TFTStruc.Mode ? F("{\"Mode\":1}") : F("{\"Mode\":0}");
-  queueIn.enqueue(Cmd);
+  char Cmd[100] = "{\"Mode\":0}";
+  if(TFTStruc.Mode) Cmd[8] = '1';
+  xQueueSendToBack(queueIn,&Cmd,0);
   Debug.print(DBG_VERBOSE,"Nextion Mode cmd: %s",Cmd);
   LastAction = millis();
 }
@@ -492,8 +494,9 @@ void trigger6()
   TFTStruc.Filt = (boolean)myNex.readNumber(F("vabFilt.val"));
   debounceF = 1;
   Debug.print(DBG_VERBOSE,"FILT button");
-  String Cmd = TFTStruc.Filt ? F("{\"FiltPump\":1}") : F("{\"FiltPump\":0}");
-  queueIn.enqueue(Cmd);
+  char Cmd[100] = "{\"FiltPump\":0}";
+  if(TFTStruc.Filt) Cmd[12] = '1';
+  xQueueSendToBack(queueIn,&Cmd,0);
   Debug.print(DBG_VERBOSE,"Nextion Filt command: %s",Cmd);
   LastAction = millis();
 }
@@ -505,8 +508,9 @@ void trigger7()
   TFTStruc.Robot = (boolean)myNex.readNumber(F("vabRobot.val"));
   debounceH = 1;
   Debug.print(DBG_VERBOSE,"Robot button");
-  String Cmd = TFTStruc.Robot ? F("{\"RobotPump\":1}") : F("{\"RobotPump\":0}");
-  queueIn.enqueue(Cmd);
+  char Cmd[100] = "{\"RobotPump\":0}";
+  if(TFTStruc.Robot) Cmd[13] = '1';
+  xQueueSendToBack(queueIn,&Cmd,0);
   Debug.print(DBG_VERBOSE,"Nextion Robot command: %s",Cmd);
   LastAction = millis();
 }
@@ -518,8 +522,9 @@ void trigger8()
   TFTStruc.R0 = (boolean)myNex.readNumber(F("vabR0.val"));
   debounceR0 = 1;
   Debug.print(DBG_VERBOSE,"Relay 0 button");
-  String Cmd = TFTStruc.R0 ? F("{\"Relay\":[0,1]}") : F("{\"Relay\":[0,0]}");
-  queueIn.enqueue(Cmd);
+  char Cmd[100] = "{\"Relay\":[0,0]}";
+  if(TFTStruc.R0) Cmd[12] = '1';
+  xQueueSendToBack(queueIn,&Cmd,0);
   Debug.print(DBG_VERBOSE,"Nextion R0 command: %s",Cmd);
   LastAction = millis();
 }
@@ -531,22 +536,24 @@ void trigger9()
   TFTStruc.R1 = (boolean)myNex.readNumber(F("vabR1.val"));
   debounceR1 = 1;
   Debug.print(DBG_VERBOSE,"Relay 1 button");
-  String Cmd = TFTStruc.R1 ? F("{\"Relay\":[1,1]}") : F("{\"Relay\":[1,0]}");
-  queueIn.enqueue(Cmd);
+  char Cmd[100] = "{\"Relay\":[1,0]}";
+  if(TFTStruc.R1) Cmd[12] = '1';
+  xQueueSendToBack(queueIn,&Cmd,0);
   Debug.print(DBG_VERBOSE,"Nextion R1 command: %s",Cmd);
   LastAction = millis();
 }
 
-//Relay 2 button was toggled
+//Winter button was toggled
 //printh 23 02 54 0A
 void trigger10()
 {
   TFTStruc.R2 = (boolean)myNex.readNumber(F("vabR2.val"));
   debounceR2 = 1;
-  Debug.print(DBG_VERBOSE,"Relay 2 button");
-  String Cmd = TFTStruc.R2 ? F("{\"Relay\":[2,1]}") : F("{\"Relay\":[2,0]}");
-  queueIn.enqueue(Cmd);
-  Debug.print(DBG_VERBOSE,"Nextion R2 command: %s",Cmd);
+  Debug.print(DBG_VERBOSE,"Winter button");
+  char Cmd[100] = "{\"Winter\":0}";
+  if(TFTStruc.R2) Cmd[10] = '1';
+  xQueueSendToBack(queueIn,&Cmd,0);
+  Debug.print(DBG_VERBOSE,"Nextion Winter command: %s",Cmd);
   LastAction = millis();
 }
 
@@ -555,8 +562,9 @@ void trigger10()
 void trigger11()
 {
   Debug.print(DBG_VERBOSE,"Calibration complete or new pH, Orp or Water Temp setpoints or new tank event");
-  String Cmd = myNex.readStr(F("pageCalibs.vaCommand.txt"));
-  queueIn.enqueue(Cmd);
+  char Cmd[100] = "";
+  strcpy(Cmd,myNex.readStr(F("pageCalibs.vaCommand.txt")).c_str());
+  xQueueSendToBack(queueIn,&Cmd,0);
   Debug.print(DBG_VERBOSE,"Nextion cal page command: %s",Cmd);
   LastAction = millis();
 }
@@ -566,8 +574,8 @@ void trigger11()
 void trigger12()
 {
   Debug.print(DBG_VERBOSE,"Clear errors event");
-  String Cmd = F("{\"Clear\":1}");
-  queueIn.enqueue(Cmd);
+  char Cmd[100] = "{\"Clear\":1}";
+  xQueueSendToBack(queueIn,&Cmd,0);
   LastAction = millis();
 }
 
@@ -576,8 +584,9 @@ void trigger12()
 void trigger13()
 {
   Debug.print(DBG_VERBOSE,"pH PID event");
-  String Cmd = (TFTStruc.PIDpH == 1) ? F("{\"PhPID\":0}") : F("{\"PhPID\":1}");
-  queueIn.enqueue(Cmd);
+  char Cmd[100] = "{\"PhPID\":1}";
+  if(TFTStruc.PIDpH == 1) Cmd[9] = '1';
+  xQueueSendToBack(queueIn,&Cmd,0);
   LastAction = millis();
 }
 
@@ -586,7 +595,8 @@ void trigger13()
 void trigger14()
 {
   Debug.print(DBG_VERBOSE,"Orp PID event");
-  String Cmd = (TFTStruc.PIDChl == 1) ? F("{\"OrpPID\":0}") : F("{\"OrpPID\":1}");
-  queueIn.enqueue(Cmd);
+  char Cmd[100] = "{\"OrpPID\":1}";
+  if(TFTStruc.PIDChl == 1) Cmd[10] = '1';
+  xQueueSendToBack(queueIn,&Cmd,0);
   LastAction = millis();
 }

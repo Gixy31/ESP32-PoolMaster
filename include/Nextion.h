@@ -1,18 +1,18 @@
 #include "EasyNextionLibrary.h"
 
-int CurrentPage = 0;
-char HourBuffer[8];
-uint8_t debounceCount = 2;
-uint8_t debounceM = 0;
-uint8_t debounceF = 0;
-uint8_t debounceH = 0;
-uint8_t debounceR0 = 0;
-uint8_t debounceR1 = 0;
-uint8_t debounceR2 = 0;
+static int CurrentPage = 0;
+static char HourBuffer[8];
+static uint8_t debounceCount = 2;
+static uint8_t debounceM     = 0;
+static uint8_t debounceF     = 0;
+static uint8_t debounceH     = 0;
+static uint8_t debounceR0    = 0;
+static uint8_t debounceR1    = 0;
+static uint8_t debounceR2    = 0;
 
 // Structure holding the measurement values to display on the Nextion display
 // Used to refresh only modified values
-struct TFTStruct
+static struct TFTStruct
 {
   float pH, Orp, pHSP, OrpSP, WT, WTSP, AT, PSI;
   uint8_t FSta, FSto, pHTkFill, OrpTkFill, PIDpH, PIDChl;
@@ -30,4 +30,4 @@ struct TFTStruct
 
 //Nextion TFT object. Choose which ever Serial port
 //you wish to connect to (not "Serial" which is used for debug), here Serial2 UART
-EasyNex myNex(Serial2);
+static EasyNex myNex(Serial2);
