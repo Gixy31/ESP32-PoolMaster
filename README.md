@@ -27,7 +27,7 @@ Compared to the initial project, the main differences are:
   - ProcessCommand, running every 480ms, to process commands received on /Home/Pool6/API MQTT Topic;
   - SettingsPublish, running when notified only (e.g with external command), to publish settings on the MQTT topic;
   - MeasuresPublish, running every 30s and when notified, to publish actual measures and status;
-  - StatusLights, running every 3100ms, to display a row of 8 status LEDs on the mother board.
+  - StatusLights, running every 3100ms, to display a row of 8 status LEDs on the mother board, through a PCF8574A on the I2C bus.
 
   </p><br /><br />
   
