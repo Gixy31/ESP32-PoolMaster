@@ -54,6 +54,15 @@ bool PSIError = false;                          // Water pressure OK
 // Queue object to store incoming JSON commands (up to 10)
 QueueHandle_t queueIn;
 
+// NVS Non Volatile SRAM (eqv. EEPROM)
+Preferences nvs;      
+
+// Instanciations of Pump and PID objects to make them global. But the constructors are then called 
+// before loading of the storage struct. At run time, the attributes take the default
+// values of the storage struct as they are compiled, just a few lines above, and not those which will 
+// be read from NVS later. This means that the correct objects attributes must be set later in
+// the setup function (fortunatelly, init methods exist).
+
 // The four pumps of the system (instanciate the Pump class)
 // In this case, all pumps start/Stop are managed by relays. pH, ORP and Robot pumps are interlocked with 
 // filtration pump
@@ -67,12 +76,12 @@ Pump RobotPump(ROBOT_PUMP, ROBOT_PUMP, NO_TANK, FILTRATION_PUMP, 0., 0.);
 PID PhPID(&storage.PhValue, &storage.PhPIDOutput, &storage.Ph_SetPoint, storage.Ph_Kp, storage.Ph_Ki, storage.Ph_Kd, DIRECT);
 PID OrpPID(&storage.OrpValue, &storage.OrpPIDOutput, &storage.Orp_SetPoint, storage.Orp_Kp, storage.Orp_Ki, storage.Orp_Kd, DIRECT);
 
-// NVS Non Volatile SRAM (eqv. EEPROM)
-Preferences nvs;      
-
 // Publishing tasks handles to notify them
 static TaskHandle_t pubSetTaskHandle;
 static TaskHandle_t pubMeasTaskHandle;
+
+// Mutex to share access to I2C bus among two tasks: AnalogPoll and StatusLights
+static SemaphoreHandle_t mutex;
 
 // Functions prototypes
 void StartTime(void);
@@ -223,6 +232,32 @@ void setup()
   Wire.write((uint8_t)0xFF);
   Wire.endTransmission();
 
+  // Initialize PIDs
+  storage.PhPIDwindowStartTime  = millis();
+  storage.OrpPIDwindowStartTime = millis();
+
+  // Limit the PIDs output range in order to limit max. pumps runtime (safety first...)
+
+  PhPID.SetTunings(storage.Ph_Kp, storage.Ph_Ki, storage.Ph_Kd);
+  PhPID.SetControllerDirection(DIRECT);
+  PhPID.SetSampleTime((int)storage.PhPIDWindowSize);
+  PhPID.SetOutputLimits(0, storage.PhPIDWindowSize);    //Whatever happens, don't allow continuous injection of Acid for more than a PID Window
+
+  OrpPID.SetTunings(storage.Orp_Kp, storage.Orp_Ki, storage.Orp_Kd);
+  OrpPID.SetControllerDirection(DIRECT);
+  OrpPID.SetSampleTime((int)storage.OrpPIDWindowSize);
+  OrpPID.SetOutputLimits(0, storage.OrpPIDWindowSize);  //Whatever happens, don't allow continuous injection of Chl for more than a PID Window
+
+ // PIDs off at start
+  SetPhPID (false);
+  SetOrpPID(false);
+
+  // Initialize pumps
+  FiltrationPump.SetMaxUpTime(0);     //no runtime limit for the filtration pump
+  PhPump.SetMaxUpTime(storage.PhPumpUpTimeLimit * 1000);
+  ChlPump.SetMaxUpTime(storage.ChlPumpUpTimeLimit * 1000);
+  RobotPump.SetMaxUpTime(0);          //no runtime limit for the robot pump
+
   // Start filtration pump at power-on if within scheduled time slots -- You can choose not to do this and start pump manually
   if (storage.AutoMode && (hour() >= storage.FiltrationStart) && (hour() < storage.FiltrationStop))
     FiltrationPump.Start();
@@ -231,36 +266,16 @@ void setup()
   // Robot pump off at start
   RobotPump.Stop();
 
-  // PIDs off at start
-  SetPhPID (false);
-  SetOrpPID(false);
-
-  // Initialize PIDs
-  storage.PhPIDwindowStartTime  = millis();
-  storage.OrpPIDwindowStartTime = millis();
-
-  // Limit the PIDs output range in order to limit max. pumps runtime (safety first...)
-  // Set also a lower limit at 30s (a lower pump duration does'nt mean anything)
-  PhPID.SetSampleTime((int)storage.PhPIDWindowSize);
-  PhPID.SetOutputLimits(0, storage.PhPIDWindowSize);    //Whatever happens, don't allow continuous injection of Acid for more than a PID Window
-
-  OrpPID.SetSampleTime((int)storage.OrpPIDWindowSize);
-  OrpPID.SetOutputLimits(0, storage.OrpPIDWindowSize);  //Whatever happens, don't allow continuous injection of Chl for more than a PID Window
-
-  // Initialize pumps
-  FiltrationPump.SetMaxUpTime(0);     //no runtime limit for the filtration pump
-  PhPump.SetMaxUpTime(storage.PhPumpUpTimeLimit * 1000);
-  ChlPump.SetMaxUpTime(storage.ChlPumpUpTimeLimit * 1000);
-  RobotPump.SetMaxUpTime(0);          //no runtime limit for the robot pump
-
   // Create queue for external commands
   queueIn = xQueueCreate((UBaseType_t)QUEUE_ITEMS_NBR,(UBaseType_t)QUEUE_ITEM_SIZE);
-
 
   // Create tasks in the scheduler.
   int app_cpu = xPortGetCoreID();
 
   Debug.print(DBG_DEBUG,"Creating loop Tasks");
+
+  // Create I2C sharing mutex
+  mutex = xSemaphoreCreateMutex();
 
   // PoolMaster: Supervisor task
   xTaskCreatePinnedToCore(
@@ -591,6 +606,16 @@ void stack_mon(UBaseType_t &hwm)
     hwm = temp;
     Debug.print(DBG_DEBUG,"[stack_mon] %s: %d bytes",pcTaskGetTaskName(NULL), hwm);
   }  
+}
+
+void lockI2C(){
+  BaseType_t rc;
+  rc = xSemaphoreTake(mutex, portMAX_DELAY);
+}
+
+void unlockI2C(){
+  BaseType_t rc;
+  rc = xSemaphoreGive(mutex);  
 }
 
 void StartTime(){
