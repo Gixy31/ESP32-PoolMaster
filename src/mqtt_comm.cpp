@@ -18,9 +18,9 @@ static TimerHandle_t wifiReconnectTimer;      // Reconnect timer for WiFi
 // static const char* MqttServerClientID = "ESP32Pool";            // /!\ choose a client ID which is unique to this Arduino board
 // static const char* MqttServerLogin    = nullptr;                //replace by const char* MqttServerLogin = nullptr; in case broker does not require a login/pwd
 // static const char* MqttServerPwd      = nullptr;                //replace by const char* MqttServerPwd = nullptr; in case broker does not require a login/pwd
-static const char* PoolTopicAPI       = "Home/Pool6/API";
-static const char* PoolTopicStatus    = "Home/Pool6/status";
-static const char* PoolTopicError     = "Home/Pool6/Err";
+static const char* PoolTopicAPI       = "Home/Pool/API";
+static const char* PoolTopicStatus    = "Home/Pool/status";
+static const char* PoolTopicError     = "Home/Pool/Err";
 
 // Functions prototypes
 void initTimers(void);

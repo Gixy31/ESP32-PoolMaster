@@ -10,12 +10,45 @@
 #include <Arduino.h>
 #include "config.h"
 #include "PoolMaster.h"
-#include "Nextion.h"
+#include "EasyNextionLibrary.h"
+
+static volatile int CurrentPage = 0;
+static volatile bool TFT_ON = true;           // display status
+static volatile bool refresh = false;         // flag to force display refresh
 
 static String temp;
-static bool TFT_ON = true;           // display status
-static bool refresh = false;         // flag to force display refresh
 static unsigned long LastAction = 0; // Last action time done on TFT. Go to sleep after TFT_SLEEP
+static char HourBuffer[8];
+
+static uint8_t debounceCount = 2;
+static uint8_t debounceM     = 0;
+static uint8_t debounceF     = 0;
+static uint8_t debounceH     = 0;
+static uint8_t debounceR0    = 0;
+static uint8_t debounceR1    = 0;
+static uint8_t debounceR2    = 0;
+
+// Structure holding the measurement values to display on the Nextion display
+// Used to refresh only modified values
+static struct TFTStruct
+{
+  float pH, Orp, pHSP, OrpSP, WT, WTSP, AT, PSI;
+  uint8_t FSta, FSto, pHTkFill, OrpTkFill, PIDpH, PIDChl;
+  boolean Mode, NetW, Filt, Robot, R0, R1, R2, pHUTErr, ChlUTErr, PSIErr, pHTLErr, ChlTLErr;
+  unsigned long pHPpRT, OrpPpRT;
+  String FW;
+} TFTStruc =
+{ //default values to force update on next refresh
+  -1., -1., -1., -1., -1., -1., -1., -1.,
+  0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  99, 99,
+  ""
+};
+
+//Nextion TFT object. Choose which ever Serial port
+//you wish to connect to (not "Serial" which is used for debug), here Serial2 UART
+static EasyNex myNex(Serial2);
 
 // Functions prototypes
 void InitTFT(void);
@@ -404,7 +437,7 @@ void UpdateTFT()
   switch (CurrentPage)
   {
     case 0: {
-        myNex.writeStr(F("p0Time.txt"), HourBuffer);
+        myNex.writeStr(F("p0Time.txt"), HourBuffer);       
         break;
       }
     case 1: {
@@ -412,11 +445,11 @@ void UpdateTFT()
         break;
       }
     case 2: {
-        myNex.writeStr(F("p2Time.txt"), HourBuffer);
+        myNex.writeStr(F("p2Time.txt"), HourBuffer);      
         break;
       }
     case 3: {
-        myNex.writeStr(F("p3Time.txt"), HourBuffer);
+        myNex.writeStr(F("p3Time.txt"), HourBuffer);      
         break;
       }
   }
@@ -436,7 +469,6 @@ void UpdateTFT()
 void trigger1()
 {
   CurrentPage = 0;
-  Debug.print(DBG_VERBOSE,"Nextion p0");
   if(!TFT_ON)
   {
     UpdateWiFi(WiFi.status() == WL_CONNECTED);
@@ -451,7 +483,6 @@ void trigger1()
 void trigger2()
 {
   CurrentPage = 1;
-  Debug.print(DBG_VERBOSE,"Nextion p1");
   LastAction = millis();
 }
 
@@ -460,16 +491,14 @@ void trigger2()
 void trigger3()
 {
   CurrentPage = 2;
-  Debug.print(DBG_VERBOSE,"Nextion p2");
   LastAction = millis();  
 }
 
 //Page 3 has finished loading
-////printh 23 02 54 04
+//printh 23 02 54 04
 void trigger4()
 {
   CurrentPage = 3;
-  Debug.print(DBG_VERBOSE,"Nextion p3");
   LastAction = millis();
 }
 

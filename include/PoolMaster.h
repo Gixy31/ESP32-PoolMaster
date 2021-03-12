@@ -1,6 +1,6 @@
 #pragma once
 #define ARDUINOJSON_USE_DOUBLE 1  // Required to force ArduinoJSON to treat float as double
-#define DEBUG_LEVEL DBG_DEBUG     // Possible levels : NONE/ERROR/WARNING/INFO/DEBUG/VERBOSE
+#define DEBUG_LEVEL DBG_INFO     // Possible levels : NONE/ERROR/WARNING/INFO/DEBUG/VERBOSE
 
 #include "Arduino_DebugUtils.h"   // Debug.print
 #include <time.h>                 // Struct and function declarations for dealing with time
@@ -9,7 +9,7 @@
 #include <PID_v1.h>               // PID regulation loop
 #include "OneWire.h"              // Onewire communication
 #include <Wire.h>                 // Two wires / I2C library
-#include <stdlib.h>               // Definitions for common types, variables, and functions
+#include <stdlib.h>               // Definitions  for common types, variables, and functions
 #include <ArduinoJson.h>          // JSON library
 #include <Pump.h>                 // Simple library to handle home-pool filtration and peristaltic pumps
 #include <DallasTemperature.h>    // Maxim (Dallas DS18B20) Temperature temperature sensor library
@@ -66,7 +66,7 @@ extern String Firmw;
 extern AsyncMqttClient mqttClient;                     // MQTT async. client
 
 // Various flags
-extern bool startTasks;                                // flag to start loop tasks       
+extern volatile bool startTasks;                                // flag to start loop tasks       
 extern bool MQTTConnection;                            // MQTT connected flag
 extern bool EmergencyStopFiltPump;                     // Filtering pump stopped manually; needs to be cleared to restart
 extern bool AntiFreezeFiltering;                       // Filtration anti freeze mode

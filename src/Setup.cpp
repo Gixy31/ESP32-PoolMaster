@@ -44,7 +44,8 @@ StoreStruct storage =
 tm timeinfo;
 
 // Various global flags
-bool startTasks = false;                        // Signal to start loop tasks
+volatile bool startTasks = false;               // Signal to start loop tasks
+
 bool AntiFreezeFiltering = false;               // Filtration anti freeze mode
 bool PhLevelError = 0;                          // PH tank level alarm
 bool ChlLevelError = 0;                         // Cl tank level alarm
@@ -104,7 +105,7 @@ bool saveParam(const char*,uint8_t );
 unsigned stack_hwm();
 void stack_mon(UBaseType_t&);
 
-// Functions as Tasks
+// Functions used as Tasks
 void PoolMaster(void*);
 void AnalogPoll(void*);
 void pHRegulation(void*);
@@ -277,7 +278,7 @@ void setup()
   // Create I2C sharing mutex
   mutex = xSemaphoreCreateMutex();
 
-  // PoolMaster: Supervisor task
+  // PoolMaster: Supervisory task
   xTaskCreatePinnedToCore(
     PoolMaster,
     "PoolMaster",
@@ -594,10 +595,12 @@ int freeRam () {
   return v;
 }
 
+// Get current free stack 
 unsigned stack_hwm(){
   return uxTaskGetStackHighWaterMark(nullptr);
 }
 
+// Monitor free stack (display smallest value)
 void stack_mon(UBaseType_t &hwm)
 {
   UBaseType_t temp = uxTaskGetStackHighWaterMark(nullptr);
@@ -608,16 +611,17 @@ void stack_mon(UBaseType_t &hwm)
   }  
 }
 
+// Get exclusive access of I2C bus
 void lockI2C(){
-  BaseType_t rc;
-  rc = xSemaphoreTake(mutex, portMAX_DELAY);
+  xSemaphoreTake(mutex, portMAX_DELAY);
 }
 
+// Release I2C bus access
 void unlockI2C(){
-  BaseType_t rc;
-  rc = xSemaphoreGive(mutex);  
+  xSemaphoreGive(mutex);  
 }
 
+// Set time parameters, including DST
 void StartTime(){
   configTime(0, 0,"0.pool.ntp.org","1.pool.ntp.org","2.pool.ntp.org"); // 3 possible NTP servers
   setenv("TZ","CET-1CEST,M3.5.0/2,M10.5.0/3",3);                       // configure local time with automatic DST  
@@ -634,16 +638,19 @@ void readLocalTime(){
   Serial.println(&timeinfo,"%A, %B %d %Y %H:%M:%S");
 }
 
+// Notify PublishSettings task 
 void PublishSettings()
 {
   xTaskNotifyGive(pubSetTaskHandle);
 }
 
+// Notify PublishMeasures task
 void PublishMeasures()
 {
   xTaskNotifyGive(pubMeasTaskHandle);
 }
 
+// Pseudo loop, which deletes loopTask of the Arduino framework
 void loop()
 {
   delay(1000);

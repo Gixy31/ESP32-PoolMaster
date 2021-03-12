@@ -21,7 +21,7 @@ void stack_mon(UBaseType_t&);
 void PoolMaster(void *pvParameters)
 {
 
-  bool DoneForTheDay = false;                     // Reset actions done once per day
+                                                                                                                                                                                                 bool DoneForTheDay = false;                     // Reset actions done once per day
   bool d_calc = false;                            // Filtration duration computed
   bool cleaning_done = false;                     // daily cleaning done   
 
@@ -162,8 +162,8 @@ void PoolMaster(void *pvParameters)
         AntiFreezeFiltering = false;
     }
 
-    //If filtration pump has been running for over 30secs but pressure is still low, stop the filtration pump, something is wrong, set error flag
-    if (FiltrationPump.IsRunning() && ((millis() - FiltrationPump.LastStartTime) > 30000) && (storage.PSIValue < storage.PSI_MedThreshold))
+    //If filtration pump has been running for over 45secs but pressure is still low, stop the filtration pump, something is wrong, set error flag
+    if (FiltrationPump.IsRunning() && ((millis() - FiltrationPump.LastStartTime) > 45000) && (storage.PSIValue < storage.PSI_MedThreshold))
     {
         FiltrationPump.Stop();
         PSIError = true;
