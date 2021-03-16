@@ -19,18 +19,19 @@ Compared to the initial project, the main differences are:
   This latest version (V6, aka ESP-2.0) implement direct usage of FreeRTOS functions for managing tasks and queues. There are 10 tasks sharing the
   app_CPU :
   - The Arduino loopTask, with only the setup() function. When the setup is finished, the task deletes itself to recover memory;
-  - PoolMaster, running every 700ms, which mainly supervises the overall timing of the system;
+  - PoolMaster, running every 500ms, which mainly supervises the overall timing of the system;
   - AnalogPoll, running every 125ms, to acquire analog measurements of pH, ORP and Pressure with an ADS115 sensor on an I2C bus;
   - GetTemp, running every 1000ms, to acquire water and air temperatures with DS18B20 sensors on two 1Wire busses;
-  - ORPRegulation, running every 1100ms, to manage Chlorine pump;
-  - pHRegulation, running every 1300ms, to manage Acid/Soda pump;
-  - ProcessCommand, running every 480ms, to process commands received on /Home/Pool6/API MQTT Topic;
+  - ORPRegulation, running every 1000ms, to manage Chlorine pump;
+  - pHRegulation, running every 1000ms, to manage Acid/Soda pump;
+  - ProcessCommand, running every 500ms, to process commands received on /Home/Pool6/API MQTT Topic;
   - SettingsPublish, running when notified only (e.g with external command), to publish settings on the MQTT topic;
   - MeasuresPublish, running every 30s and when notified, to publish actual measures and status;
-  - StatusLights, running every 3100ms, to display a row of 8 status LEDs on the mother board, through a PCF8574A on the I2C bus.
+  - StatusLights, running every 3000ms, to display a row of 8 status LEDs on the mother board, through a PCF8574A on the I2C bus.
 
   </p><br /><br />
-  
+
+<p align="center"> <img src="/docs/Profiling.jpg" width="802" title=""> </p>  <br /><br />
 <p align="center"> <img src="/docs/PoolMaster_board.JPG" width="802" title="Board"> </p> <br /><br />  
 <p align="center"> <img src="/docs/Page 0.JPG" width="300" title=""> </p>
 <p align="center"> <img src="/docs/Page 1.JPG" width="300" title=""> </p>
