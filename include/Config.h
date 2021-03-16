@@ -46,3 +46,37 @@
 
 //Display timeout before blanking
 #define TFT_SLEEP 60000 
+
+// Loop tasks scheduling parameters
+//---------------------------------
+// T1: AnalogPoll
+// T2: PoolServer
+// T3: PoolMaster
+// T4: getTemp
+// T5: OrpRegulation
+// T6: pHRegulation
+// T7: StatusLights
+// T8: PublishMeasures
+// T9: PublishSettings 
+
+//Periods 
+// Task9 period is initialized with PUBLISHINTERVAL and can be changed dynamically
+#define PT1 125
+#define PT2 500
+#define PT3 500
+#define PT4 1000 / (1 << (12 - TEMPERATURE_RESOLUTION))
+#define PT5 1000
+#define PT6 1000
+#define PT7 3000
+#define PT8 30000
+
+//Start offsets to spread tasks along time
+// Task1 has no delay
+#define DT2 190/portTICK_PERIOD_MS
+#define DT3 310/portTICK_PERIOD_MS
+#define DT4 440/portTICK_PERIOD_MS
+#define DT5 560/portTICK_PERIOD_MS
+#define DT6 920/portTICK_PERIOD_MS
+#define DT7 100/portTICK_PERIOD_MS
+#define DT8 570/portTICK_PERIOD_MS
+#define DT9 940/portTICK_PERIOD_MS

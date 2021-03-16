@@ -26,18 +26,26 @@ void ProcessCommand(void *pvParameters)
   StaticJsonDocument<200> command;
   char JSONCommand[150] = "";                         // JSON command to process  
 
-  TickType_t period = 480;  
+  while (!startTasks) ;
+  vTaskDelay(DT2);                                // Scheduling offset   
+
+  TickType_t period = PT2;  
   static UBaseType_t hwm = 0;
   TickType_t ticktime = xTaskGetTickCount(); 
 
-  for(;;) {
+  #ifdef CHRONO
+  unsigned long td;
+  int t_act=0,t_min=999,t_max=0;
+  float t_mean=0.;
+  int n=1;
+  #endif
 
-    stack_mon(hwm);
+  for(;;) {
+    #ifdef CHRONO
+    td = millis();
+    #endif
     //Is there any incoming JSON commands
-    if (uxQueueMessagesWaiting(queueIn) == 0)
-    {
-      vTaskDelayUntil(&ticktime,period);
-    } else
+    if (uxQueueMessagesWaiting(queueIn) != 0)
     {  
       xQueueReceive(queueIn,&JSONCommand,0);
 
@@ -485,7 +493,17 @@ void ProcessCommand(void *pvParameters)
         //Publish Update on the MQTT broker the status of our variables
         PublishMeasures();
       }
-    }  
+    }
+    #ifdef CHRONO
+    t_act = millis() - td;
+    if(t_act > t_max) t_max = t_act;
+    if(t_act < t_min) t_min = t_act;
+    t_mean += (t_act - t_mean)/n;
+    ++n;
+    Debug.print(DBG_INFO,"[PoolServer] td: %d t_act: %d t_min: %d t_max: %d t_mean: %4.1f",td,t_act,t_min,t_max,t_mean);
+    #endif 
+    stack_mon(hwm); 
+    vTaskDelayUntil(&ticktime,period);
   }  
 }
 

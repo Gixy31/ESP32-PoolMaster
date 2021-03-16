@@ -25,18 +25,30 @@ void PoolMaster(void *pvParameters)
   bool d_calc = false;                            // Filtration duration computed
   bool cleaning_done = false;                     // daily cleaning done   
 
-  static UBaseType_t hwm=0;                       // free task size
+  static UBaseType_t hwm=0;                       // free stack size
 
   while(!startTasks);
+  vTaskDelay(DT3);                                // Scheduling offset 
 
   esp_task_wdt_add(nullptr);
-  TickType_t period = 700;  
+  TickType_t period = PT3;  
   TickType_t ticktime = xTaskGetTickCount(); 
+
+  #ifdef CHRONO
+  unsigned long td;
+  int t_act=0,t_min=999,t_max=0;
+  float t_mean=0.;
+  int n=1;
+  #endif
 
   for(;;)
   {  
     // reset watchdog
     esp_task_wdt_reset();
+
+    #ifdef CHRONO
+    td = millis();
+    #endif    
 
     // Handle OTA update
     ArduinoOTA.handle();
@@ -182,8 +194,16 @@ void PoolMaster(void *pvParameters)
     //UPdate Nextion TFT
     UpdateTFT();
 
-    stack_mon(hwm);
+    #ifdef CHRONO
+    t_act = millis() - td;
+    if(t_act > t_max) t_max = t_act;
+    if(t_act < t_min) t_min = t_act;
+    t_mean += (t_act - t_mean)/n;
+    ++n;
+    Debug.print(DBG_INFO,"[PoolMaster] td: %d t_act: %d t_min: %d t_max: %d t_mean: %4.1f",td,t_act,t_min,t_max,t_mean);
+    #endif 
 
+    stack_mon(hwm);
     vTaskDelayUntil(&ticktime,period);
   }
 }

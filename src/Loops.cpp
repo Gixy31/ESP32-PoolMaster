@@ -29,33 +29,54 @@ void stack_mon(UBaseType_t&);
 void lockI2C();
 void unlockI2C();
 
+//Update loop for ADS1115 measurements
+// Some explanations: The sampling rate is set to 16sps in order to be sure that 
+// every 125ms (which is the period of the task) there is a sample available. As it takes 3ms to
+// update and restart the ADC, the whole loop takes a minimum of 3 + 1/SPS ms. If SPS was set to 
+// 8sps, that means 128ms instead of 125ms. With 16sps, we have 3 + 62.5 < 125ms which is OK.
+// With those settings, we get a value for each channel roughly every second: 9 values asked 
+// (3 per channel), with height values retrieved per second -> 0,89 value per second. The value
+// returned for each channel is the median of the three samples. Then, among the last 
+// 11 samples returned, we take the 5 median ones and compute the mean as consolidated value.
+
 void AnalogInit()
 {
-  adc.setSpeed(ADS1115_SPEED_8SPS);
+  adc.setSpeed(ADS1115_SPEED_16SPS);
   adc.addChannel(ADS1115_CHANNEL0, ADS1115_RANGE_6144);
   adc.addChannel(ADS1115_CHANNEL1, ADS1115_RANGE_6144);
   adc.addChannel(ADS1115_CHANNEL2, ADS1115_RANGE_6144);
   adc.setSamples(3);
 }
 
-//Update loop for ADS1115 measurements
 void AnalogPoll(void *pvParameters)
 {
   while (!startTasks) ;
 
-  TickType_t period = 125;  
+  TickType_t period = PT1;  
   TickType_t ticktime = xTaskGetTickCount(); 
   static UBaseType_t hwm=0;
+
+  #ifdef CHRONO
+  unsigned long td;
+  int t_act=0,t_min=999,t_max=0;
+  float t_mean=0.;
+  int n=1;
+  #endif
 
   lockI2C();
   adc.start();
   unlockI2C();
   vTaskDelayUntil(&ticktime,period);
   
-  for(;;){
+  for(;;)
+  {
+    #ifdef CHRONO
+    td = millis();
+    #endif
+    ticktime = xTaskGetTickCount();
+
     lockI2C();
     adc.update();
-    ticktime = xTaskGetTickCount();
 
     if(adc.ready()){                              // all conversions done ?
         orp_sensor_value = adc.readFilter(0) ;    // ORP sensor current value
@@ -119,8 +140,17 @@ void AnalogPoll(void *pvParameters)
             ph_sensor_value,storage.PhValue,orp_sensor_value,storage.OrpValue,psi_sensor_value,storage.PSIValue);
     }
     unlockI2C();
-    stack_mon(hwm);
 
+    #ifdef CHRONO
+    t_act = millis() - td;
+    if(t_act > t_max) t_max = t_act;
+    if(t_act < t_min) t_min = t_act;
+    t_mean += (t_act - t_mean)/n;
+    ++n;
+    Debug.print(DBG_INFO,"[AnalogPoll] td: %d t_act: %d t_min: %d t_max: %d t_mean: %4.1f",td,t_act,t_min,t_max,t_mean);
+    #endif 
+
+    stack_mon(hwm);
     vTaskDelayUntil(&ticktime,period);
   }  
 }
@@ -131,13 +161,25 @@ void StatusLights(void *pvParameters)
   uint8_t status;
 
   while (!startTasks) ;
+  vTaskDelay(DT7);                                // Scheduling offset 
 
-  TickType_t period = 3100;  
+  TickType_t period = PT7;  
   TickType_t ticktime = xTaskGetTickCount();
   static UBaseType_t hwm = 0;
 
+  #ifdef CHRONO
+  unsigned long td;
+  int t_act=0,t_min=999,t_max=0;
+  float t_mean=0.;
+  int n=1;
+  #endif
+
   for(;;)
   {
+    #ifdef CHRONO
+    td = millis();
+    #endif 
+
     status = 0;
     status |= (line & 1) << 1;
     if(line == 0)
@@ -166,8 +208,16 @@ void StatusLights(void *pvParameters)
     Wire.endTransmission();
     unlockI2C();
 
-    stack_mon(hwm);
+    #ifdef CHRONO
+    t_act = millis() - td;
+    if(t_act > t_max) t_max = t_act;
+    if(t_act < t_min) t_min = t_act;
+    t_mean += (t_act - t_mean)/n;
+    ++n;
+    Debug.print(DBG_INFO,"[StatusLights] td: %d t_act: %d t_min: %d t_max: %d t_mean: %4.1f",td,t_act,t_min,t_max,t_mean);
+    #endif
 
+    stack_mon(hwm);
     vTaskDelayUntil(&ticktime,period);
   }  
 }
@@ -175,13 +225,25 @@ void StatusLights(void *pvParameters)
 void pHRegulation(void *pvParameters)
 {
   while (!startTasks) ;
+  vTaskDelay(DT6);                                // Scheduling offset 
 
-  TickType_t period = 1300;  
+  TickType_t period = PT6;  
   TickType_t ticktime = xTaskGetTickCount();
   static UBaseType_t hwm = 0;
 
+  #ifdef CHRONO
+  unsigned long td;
+  int t_act=0,t_min=999,t_max=0;
+  float t_mean=0.;
+  int n=1;
+  #endif
+
   for(;;)
   {
+    #ifdef CHRONO
+    td = millis();
+    #endif 
+
     //do not compute PID if filtration pump is not running
     // Set also a lower limit at 30s (a lower pump duration does'nt mean anything)
 
@@ -212,6 +274,15 @@ void pHRegulation(void *pvParameters)
         PhPump.Start();   
     }
 
+    #ifdef CHRONO
+    t_act = millis() - td;
+    if(t_act > t_max) t_max = t_act;
+    if(t_act < t_min) t_min = t_act;
+    t_mean += (t_act - t_mean)/n;
+    ++n;
+    Debug.print(DBG_INFO,"[pHRegulation] td: %d t_act: %d t_min: %d t_max: %d t_mean: %4.1f",td,t_act,t_min,t_max,t_mean);
+    #endif
+
     stack_mon(hwm);
     vTaskDelayUntil(&ticktime,period);
   }  
@@ -221,13 +292,25 @@ void pHRegulation(void *pvParameters)
 void OrpRegulation(void *pvParameters)
 {
   while (!startTasks) ;
+  vTaskDelay(DT5);                                // Scheduling offset 
 
-  TickType_t period = 1100;  
+  TickType_t period = PT5;  
   TickType_t ticktime = xTaskGetTickCount();
   static UBaseType_t hwm = 0;
 
+  #ifdef CHRONO
+  unsigned long td;
+  int t_act=0,t_min=999,t_max=0;
+  float t_mean=0.;
+  int n=1;
+  #endif
+
   for(;;)
-  {    
+  { 
+    #ifdef CHRONO
+    td = millis();
+    #endif 
+
     //do not compute PID if filtration pump is not running
     // Set also a lower limit at 30s (a lower pump duration does'nt mean anything)
 
@@ -257,6 +340,15 @@ void OrpRegulation(void *pvParameters)
       else
         ChlPump.Start();
     }
+
+    #ifdef CHRONO
+    t_act = millis() - td;
+    if(t_act > t_max) t_max = t_act;
+    if(t_act < t_min) t_min = t_act;
+    t_mean += (t_act - t_mean)/n;
+    ++n;
+    Debug.print(DBG_INFO,"[OrpRegulation] td: %d t_act: %d t_min: %d t_max: %d t_mean: %4.1f",td,t_act,t_min,t_max,t_mean);
+    #endif
 
     stack_mon(hwm);    
     vTaskDelayUntil(&ticktime,period);
@@ -319,18 +411,28 @@ void TempInit()
 void getTemp(void *pvParameters)
 {
   while (!startTasks) ;
+  vTaskDelay(DT4);                                // Scheduling offset 
 
-  TickType_t period = 1000 / (1 << (12 - TEMPERATURE_RESOLUTION));  
+  TickType_t period = PT4;  
   TickType_t ticktime = xTaskGetTickCount();
   static UBaseType_t hwm = 0;
 
-  for(;;)
-  {    
-    sensors_W.requestTemperatures();
-    sensors_A.requestTemperatures();
+  #ifdef CHRONO
+  unsigned long td;
+  int t_act=0,t_min=999,t_max=0;
+  float t_mean=0.;
+  int n=1;
+  #endif
 
-    stack_mon(hwm);
-    vTaskDelayUntil(&ticktime,period);
+  sensors_W.requestTemperatures();
+  sensors_A.requestTemperatures();
+  vTaskDelayUntil(&ticktime,period);
+  
+  for(;;)
+  {        
+    #ifdef CHRONO
+    td = millis();
+    #endif 
 
     double temp = sensors_W.getTempC(DS18B20_W);
     if (temp == NAN || temp == -127) {
@@ -347,5 +449,20 @@ void getTemp(void *pvParameters)
     samples_ATemp.add(storage.TempExternal);
     storage.TempExternal = samples_ATemp.getAverage(5);
     Debug.print(DBG_DEBUG,"DS18B20_A: %6.2f°C",storage.TempExternal);
+
+    sensors_W.requestTemperatures();
+    sensors_A.requestTemperatures();
+
+    #ifdef CHRONO
+    t_act = millis() - td;
+    if(t_act > t_max) t_max = t_act;
+    if(t_act < t_min) t_min = t_act;
+    t_mean += (t_act - t_mean)/n;
+    ++n;
+    Debug.print(DBG_INFO,"[getTemp] td: %d t_act: %d t_min: %d t_max: %d t_mean: %4.1f",td,t_act,t_min,t_max,t_mean);
+    #endif
+
+    stack_mon(hwm);
+    vTaskDelayUntil(&ticktime,period);
   }
 }

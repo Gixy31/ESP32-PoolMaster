@@ -278,17 +278,6 @@ void setup()
   // Create I2C sharing mutex
   mutex = xSemaphoreCreateMutex();
 
-  // PoolMaster: Supervisory task
-  xTaskCreatePinnedToCore(
-    PoolMaster,
-    "PoolMaster",
-    3072,
-    NULL,
-    1,
-    nullptr,
-    app_cpu
-  );
-
   // Analog measurement polling task
   xTaskCreatePinnedToCore(
     AnalogPoll,
@@ -300,22 +289,22 @@ void setup()
     app_cpu
   );
 
-  // pH regulation loop
-    xTaskCreatePinnedToCore(
-    pHRegulation,
-    "pHRegulation",
-    2048,
+  // MQTT commands processing
+  xTaskCreatePinnedToCore(
+    ProcessCommand,
+    "ProcessCommand",
+    3072,
     NULL,
     1,
     nullptr,
     app_cpu
   );
 
- // ORP regulation loop
-    xTaskCreatePinnedToCore(
-    OrpRegulation,
-    "ORPRegulation",
-    2048,
+  // PoolMaster: Supervisory task
+  xTaskCreatePinnedToCore(
+    PoolMaster,
+    "PoolMaster",
+    3072,
     NULL,
     1,
     nullptr,
@@ -333,36 +322,25 @@ void setup()
     app_cpu
   );
   
-  // MQTT commands processing
-  xTaskCreatePinnedToCore(
-    ProcessCommand,
-    "ProcessCommand",
-    3072,
+ // ORP regulation loop
+    xTaskCreatePinnedToCore(
+    OrpRegulation,
+    "ORPRegulation",
+    2048,
     NULL,
     1,
     nullptr,
     app_cpu
   );
 
-  // Settings MQTT publish 
-  xTaskCreatePinnedToCore(
-    SettingsPublish,
-    "SettingsPublish",
-    3072,
+  // pH regulation loop
+    xTaskCreatePinnedToCore(
+    pHRegulation,
+    "pHRegulation",
+    2048,
     NULL,
     1,
-    &pubSetTaskHandle,                // needed to notify task later
-    app_cpu
-  );
-
-  // Measures MQTT publish 
-  xTaskCreatePinnedToCore(
-    MeasuresPublish,
-    "MeasuresPublish",
-    3072,
-    NULL,
-    1,
-    &pubMeasTaskHandle,               // needed to notify task later
+    nullptr,
     app_cpu
   );
 
@@ -376,6 +354,28 @@ void setup()
     nullptr,
     app_cpu
   );  
+
+  // Measures MQTT publish 
+  xTaskCreatePinnedToCore(
+    MeasuresPublish,
+    "MeasuresPublish",
+    3072,
+    NULL,
+    1,
+    &pubMeasTaskHandle,               // needed to notify task later
+    app_cpu
+  );
+
+  // Settings MQTT publish 
+  xTaskCreatePinnedToCore(
+    SettingsPublish,
+    "SettingsPublish",
+    3072,
+    NULL,
+    1,
+    &pubSetTaskHandle,                // needed to notify task later
+    app_cpu
+  );
 
   // Initialize OTA (On The Air update)
   ArduinoOTA.setPort(OTA_PORT);
@@ -412,12 +412,12 @@ void setup()
   Debug.print(DBG_DEBUG,"[memCheck] Stack: %d bytes - Heap: %d bytes",stack_hwm(),freeRam());
 
   // Start loops tasks
-  Debug.print(DBG_DEBUG,"Init done, starting loop tasks");
+  Debug.print(DBG_INFO,"Init done, starting loop tasks");
   startTasks = true;
 
   delay(1000);          // wait for tasks to start
 
-  PublishSettings();    // notify Settings publish task
+//  PublishSettings();    // notify Settings publish task -> Task will publish once when activated
 
 }
 

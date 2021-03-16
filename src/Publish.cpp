@@ -72,13 +72,23 @@ void PublishTopic(const char* topic, JsonDocument& root)
 void SettingsPublish(void *pvParameters)
 {
   while(!startTasks);
+  vTaskDelay(DT9);                                // Scheduling offset 
 
   static UBaseType_t hwm = 0;
+
+  #ifdef CHRONO
+  unsigned long td;
+  int t_act=0,t_min=999,t_max=0;
+  float t_mean=0.;
+  int n=1;
+  #endif
   
   for(;;)
   {
-    stack_mon(hwm);    
-    ulTaskNotifyTake(pdFALSE,portMAX_DELAY);    
+    #ifdef CHRONO
+    td = millis();
+    #endif
+         
     if (mqttClient.connected())
     {
         //send a JSON to MQTT broker. /!\ Split JSON if longer than 100 bytes
@@ -177,6 +187,18 @@ void SettingsPublish(void *pvParameters)
 
     //display remaining RAM space. For debug
     Debug.print(DBG_DEBUG,"[memCheck]: %db",freeRam());
+
+    #ifdef CHRONO
+    t_act = millis() - td;
+    if(t_act > t_max) t_max = t_act;
+    if(t_act < t_min) t_min = t_act;
+    t_mean += (t_act - t_mean)/n;
+    ++n;
+    Debug.print(DBG_INFO,"[PublishSettings] td: %d t_act: %d t_min: %d t_max: %d t_mean: %4.1f",td,t_act,t_min,t_max,t_mean);
+    #endif
+
+    stack_mon(hwm);    
+    ulTaskNotifyTake(pdFALSE,portMAX_DELAY);
   }  
 }
 
@@ -184,14 +206,33 @@ void SettingsPublish(void *pvParameters)
 void MeasuresPublish(void *pvParameters)
 { 
   while(!startTasks);
+  vTaskDelay(DT8);                                // Scheduling offset 
 
   static UBaseType_t hwm = 0;
+  TickType_t WaitTimeOut;
+  TickType_t StartTime;
+  TickType_t StopTime;
+  TickType_t DeltaTime;
+
+  #ifdef CHRONO
+  unsigned long td;
+  int t_act=0,t_min=999,t_max=0;
+  float t_mean=0.;
+  int n=1;
+  #endif
+
+  WaitTimeOut = (TickType_t)storage.PublishPeriod/portTICK_PERIOD_MS;
 
   for(;;)
   {
     stack_mon(hwm);      
-    ulTaskNotifyTake(pdFALSE,(TickType_t)storage.PublishPeriod);
-    
+    ulTaskNotifyTake(pdFALSE,WaitTimeOut);
+
+    StartTime = xTaskGetTickCount();
+
+    #ifdef CHRONO
+    td = millis();
+    #endif    
     //Store the GPIO states in one Byte (more efficient over MQTT)
     EncodeBitMap();
 
@@ -235,5 +276,23 @@ void MeasuresPublish(void *pvParameters)
 
     //display remaining RAM space. For debug
     Debug.print(DBG_DEBUG,"[memCheck]: %db",freeRam());
+
+    #ifdef CHRONO
+    t_act = millis() - td;
+    if(t_act > t_max) t_max = t_act;
+    if(t_act < t_min) t_min = t_act;
+    t_mean += (t_act - t_mean)/n;
+    ++n;
+    Debug.print(DBG_INFO,"[PublishMeasures] td: %d t_act: %d t_min: %d t_max: %d t_mean: %4.1f",td,t_act,t_min,t_max,t_mean);
+    #endif  
+
+// Compute elapsed time to adjust next waiting time, taking into account a possible rollover of ticks count
+    StopTime = xTaskGetTickCount();
+    if(StartTime <= StopTime)
+      DeltaTime = StopTime - StartTime;
+    else
+      DeltaTime = StopTime + (~TickType_t(0) - StartTime) + 1;
+
+    WaitTimeOut = (TickType_t)storage.PublishPeriod/portTICK_PERIOD_MS - DeltaTime;   
   }  
 }
