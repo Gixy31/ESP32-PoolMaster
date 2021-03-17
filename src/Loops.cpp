@@ -73,7 +73,6 @@ void AnalogPoll(void *pvParameters)
     #ifdef CHRONO
     td = millis();
     #endif
-    ticktime = xTaskGetTickCount();
 
     lockI2C();
     adc.update();

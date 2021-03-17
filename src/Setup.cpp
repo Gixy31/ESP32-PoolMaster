@@ -5,10 +5,6 @@
 #include "Config.h"
 #include "PoolMaster.h"
 
-// Used to simulate pH/ORP sensors. Very simple simulation: the sensor value is computed from the 
-// output of the PID loop to reach linearly the theorical value produced by this output after one hour
-//#define SIMU
-
 #ifdef SIMU
 bool init_simu = true;
 double pHLastValue = 7.;

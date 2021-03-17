@@ -74,6 +74,10 @@ void SettingsPublish(void *pvParameters)
   while(!startTasks);
   vTaskDelay(DT9);                                // Scheduling offset 
 
+  uint32_t mod1 = xTaskGetTickCount() % 1000;     // This is the offset to respect for future resume
+  uint32_t mod2;
+  TickType_t waitTime;
+
   static UBaseType_t hwm = 0;
 
   #ifdef CHRONO
@@ -88,6 +92,8 @@ void SettingsPublish(void *pvParameters)
     #ifdef CHRONO
     td = millis();
     #endif
+
+    Debug.print(DBG_DEBUG,"[PublishSettings] start");
          
     if (mqttClient.connected())
     {
@@ -199,20 +205,36 @@ void SettingsPublish(void *pvParameters)
 
     stack_mon(hwm);    
     ulTaskNotifyTake(pdFALSE,portMAX_DELAY);
+    mod2 = xTaskGetTickCount() % 1000;
+    if(mod2 <= mod1)
+      waitTime = mod1 - mod2;
+    else
+      waitTime = 1000 +  mod1 - mod2;
+    vTaskDelay(waitTime);  
   }  
 }
 
 //PublishData loop. Publishes system info/data to MQTT broker every XX secs (30 secs by default)
+//or when notified.
+//There is two timing computations:
+//-If notified, wait for the next offset to always being at the same place in the scheduling cycle
+//-Then compute the time spent to do the job and reload the timeout for the next cycle
+
 void MeasuresPublish(void *pvParameters)
 { 
   while(!startTasks);
   vTaskDelay(DT8);                                // Scheduling offset 
+  uint32_t mod1 = xTaskGetTickCount() % 1000;     // This is the offset to respect for future resume
 
-  static UBaseType_t hwm = 0;
   TickType_t WaitTimeOut;
   TickType_t StartTime;
   TickType_t StopTime;
   TickType_t DeltaTime;
+  uint32_t rc;
+  uint32_t mod2;
+  TickType_t waitTime;
+
+  static UBaseType_t hwm = 0;
 
   #ifdef CHRONO
   unsigned long td;
@@ -224,11 +246,21 @@ void MeasuresPublish(void *pvParameters)
   WaitTimeOut = (TickType_t)storage.PublishPeriod/portTICK_PERIOD_MS;
 
   for(;;)
-  {
-    stack_mon(hwm);      
-    ulTaskNotifyTake(pdFALSE,WaitTimeOut);
+  {   
+    rc = ulTaskNotifyTake(pdFALSE,WaitTimeOut); 
+  
+    if(rc != 0)   // notification => wait for next offset
+    {
+      mod2 = xTaskGetTickCount() % 1000;
+      if(mod2 <= mod1)
+        waitTime = mod1 - mod2;
+      else
+        waitTime = 1000 +  mod1 - mod2;
+      vTaskDelay(waitTime);
+    }
 
-    StartTime = xTaskGetTickCount();
+    StartTime = xTaskGetTickCount();   
+    Debug.print(DBG_DEBUG,"[PublishMeasures] start");  
 
     #ifdef CHRONO
     td = millis();
@@ -276,6 +308,7 @@ void MeasuresPublish(void *pvParameters)
 
     //display remaining RAM space. For debug
     Debug.print(DBG_DEBUG,"[memCheck]: %db",freeRam());
+    stack_mon(hwm);     
 
     #ifdef CHRONO
     t_act = millis() - td;
