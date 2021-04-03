@@ -22,7 +22,7 @@ double ChlCumul = 0.;
 #endif
 
 // Firmware revision
-String Firmw = "ESP-2.0";
+String Firmw = "ESP-2.2";
 
 //Settings structure and its default values
 StoreStruct storage =
@@ -32,7 +32,7 @@ StoreStruct storage =
   12, 8, 22, 8, 22, 10,
   1800, 1800, 30000,
   1200000, 1200000, 0, 0,
-  7.3, 750.0, 1.8, 0.75, 10.0, 18.0, 3.0, 3.507951, -1.923527, -972.741849, 2477.392837, 1.0, 0.0,
+  7.3, 750.0, 1.8, 0.7, 10.0, 18.0, 3.0, 3.507951, -1.923527, -972.741849, 2477.392837, 1.0, 0.0,
   2250000.0, 0.0, 0.0, 18000.0, 0.0, 0.0, 0.0, 0.0, 28.0, 7.3, 750., 1.3,
   100.0, 100.0, 20.0, 20.0, 1.5, 1.5
 };
@@ -63,10 +63,10 @@ Preferences nvs;
 // The four pumps of the system (instanciate the Pump class)
 // In this case, all pumps start/Stop are managed by relays. pH, ORP and Robot pumps are interlocked with 
 // filtration pump
-Pump FiltrationPump(FILTRATION_PUMP, FILTRATION_PUMP, NO_TANK, NO_INTERLOCK, 0.0, 0.0);
-Pump PhPump(PH_PUMP, PH_PUMP, PH_LEVEL, FILTRATION_PUMP, storage.pHPumpFR, storage.pHTankVol);
-Pump ChlPump(CHL_PUMP, CHL_PUMP, CHL_LEVEL, FILTRATION_PUMP, storage.ChlPumpFR, storage.ChlTankVol);
-Pump RobotPump(ROBOT_PUMP, ROBOT_PUMP, NO_TANK, FILTRATION_PUMP, 0., 0.);
+Pump FiltrationPump(FILTRATION_PUMP, FILTRATION_PUMP);
+Pump PhPump(PH_PUMP, PH_PUMP, NO_LEVEL, FILTRATION_PUMP, storage.pHPumpFR, storage.pHTankVol, storage.AcidFill);
+Pump ChlPump(CHL_PUMP, CHL_PUMP, NO_LEVEL, FILTRATION_PUMP, storage.ChlPumpFR, storage.ChlTankVol, storage.ChlFill);
+Pump RobotPump(ROBOT_PUMP, ROBOT_PUMP, NO_TANK, FILTRATION_PUMP);
 
 // PIDs instances
 //Specify the direction and initial tuning parameters
@@ -100,6 +100,7 @@ void TempInit(void);
 bool saveParam(const char*,uint8_t );
 unsigned stack_hwm();
 void stack_mon(UBaseType_t&);
+void info();
 
 // Functions used as Tasks
 void PoolMaster(void*);
@@ -122,6 +123,9 @@ void setup()
   Debug.setDebugLevel(DEBUG_LEVEL);
   Debug.timestampOn();
 
+  //get board info
+  info();
+  
   // Initialize Nextion TFT
   InitTFT();
   ResetTFT();
@@ -645,6 +649,21 @@ void PublishMeasures()
 {
   xTaskNotifyGive(pubMeasTaskHandle);
 }
+
+//board info
+void info(){
+  esp_chip_info_t out_info;
+  esp_chip_info(&out_info);
+  Debug.print(DBG_INFO,"CPU frequency       : %dMHz",ESP.getCpuFreqMHz());
+  Debug.print(DBG_INFO,"CPU Cores           : %d",out_info.cores);
+  Debug.print(DBG_INFO,"Flash size          : %dMB",ESP.getFlashChipSize()/1000000);
+  Debug.print(DBG_INFO,"Free RAM            : %d bytes",ESP.getFreeHeap());
+  Debug.print(DBG_INFO,"Min heap            : %d bytes",esp_get_free_heap_size());
+  Debug.print(DBG_INFO,"tskIDLE_PRIORITY    : %d",tskIDLE_PRIORITY);
+  Debug.print(DBG_INFO,"confixMAX_PRIORITIES: %d",configMAX_PRIORITIES);
+  Debug.print(DBG_INFO,"configTICK_RATE_HZ  : %d",configTICK_RATE_HZ);
+}
+
 
 // Pseudo loop, which deletes loopTask of the Arduino framework
 void loop()

@@ -6,8 +6,8 @@
 #define RELAY_R1         4   // Spare, not connected
 
 //Digital input pins connected to Acid and Chl tank level reed switches
-#define CHL_LEVEL       39
-#define PH_LEVEL        36
+#define CHL_LEVEL       39   // not wired. Use NO_LEVEL option of Pump class
+#define PH_LEVEL        36   //                - " -
 
 //One wire bus for the air/water temperature measurement
 #define ONE_WIRE_BUS_A  18
@@ -34,7 +34,7 @@
 
 //Version of config stored in EEPROM
 //Random value. Change this value (to any other value) to revert the config to default values
-#define CONFIG_VERSION 6
+#define CONFIG_VERSION 1
 
 //MQTT stuff including local broker/server IP address, login and pwd
 //------------------------------------------------------------------
@@ -45,7 +45,7 @@
 #define MQTT_SERVER_PORT 1883
 
 //Display timeout before blanking
-#define TFT_SLEEP 60000 
+#define TFT_SLEEP 60000L 
 
 // Loop tasks scheduling parameters
 //---------------------------------

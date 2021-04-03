@@ -8,7 +8,7 @@
 */
 
 #include <Arduino.h>
-#include "config.h"
+#include "Config.h"
 #include "PoolMaster.h"
 #include "EasyNextionLibrary.h"
 
@@ -18,7 +18,7 @@ static volatile bool refresh = false;         // flag to force display refresh
 
 static String temp;
 static unsigned long LastAction = 0; // Last action time done on TFT. Go to sleep after TFT_SLEEP
-static char HourBuffer[8];
+static char HourBuffer[9];
 
 static uint8_t debounceCount = 2;
 static uint8_t debounceM     = 0;
@@ -454,7 +454,7 @@ void UpdateTFT()
       }
   }
   //put TFT in sleep mode with wake up on touch and force page 0 load to trigger an event
-  if(millis() - LastAction >= TFT_SLEEP && TFT_ON)
+  if((unsigned long)(millis() - LastAction) >= TFT_SLEEP && TFT_ON)
   {
     myNex.writeStr("thup=1");
     myNex.writeStr("wup=0");

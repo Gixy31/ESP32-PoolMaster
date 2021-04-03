@@ -3,7 +3,7 @@
 // for other MQTT clients (dashboards)
 
 #include <Arduino.h>
-#include "config.h"
+#include "Config.h"
 #include "PoolMaster.h"
 
 // Functions prototypes
@@ -246,6 +246,7 @@ void ProcessCommand(void *pvParameters)
           storage.pHTankVol = (double)command[F("pHTank")][0];
           PhPump.SetTankVolume(storage.pHTankVol);
           storage.AcidFill = (double)command[F("pHTank")][1];
+          PhPump.SetTankFill(storage.AcidFill);
           PhPump.ResetUpTime();
           saveParam("pHTankVol",storage.pHTankVol);
           saveParam("AcidFill",storage.AcidFill);               
@@ -258,6 +259,7 @@ void ProcessCommand(void *pvParameters)
           storage.ChlTankVol = (double)command[F("ChlTank")][0];
           ChlPump.SetTankVolume(storage.ChlTankVol);
           storage.ChlFill = (double)command[F("ChlTank")][1];
+          ChlPump.SetTankFill(storage.ChlFill);
           ChlPump.ResetUpTime();
           saveParam("ChlTankVol",storage.ChlTankVol);
           saveParam("ChlFill",storage.ChlFill);

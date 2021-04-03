@@ -70,7 +70,9 @@ void PoolMaster(void *pvParameters)
 
         FiltrationPump.ResetUpTime();
         PhPump.ResetUpTime();
+        PhPump.SetTankFill(storage.AcidFill);
         ChlPump.ResetUpTime();
+        ChlPump.SetTankFill(storage.ChlFill);
         RobotPump.ResetUpTime();
 
         EmergencyStopFiltPump = false;
