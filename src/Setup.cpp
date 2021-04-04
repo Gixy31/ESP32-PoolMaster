@@ -22,7 +22,7 @@ double ChlCumul = 0.;
 #endif
 
 // Firmware revision
-String Firmw = "ESP-2.2";
+String Firmw = "ESP-2.3";
 
 //Settings structure and its default values
 StoreStruct storage =
@@ -43,8 +43,6 @@ tm timeinfo;
 volatile bool startTasks = false;               // Signal to start loop tasks
 
 bool AntiFreezeFiltering = false;               // Filtration anti freeze mode
-bool PhLevelError = 0;                          // PH tank level alarm
-bool ChlLevelError = 0;                         // Cl tank level alarm
 bool EmergencyStopFiltPump = false;             // flag will be (re)set by double-tapp button
 bool PSIError = false;                          // Water pressure OK
 
@@ -159,8 +157,10 @@ void setup()
   //Initialize pump objects with stored config data
   PhPump.SetFlowRate(storage.pHPumpFR);
   PhPump.SetTankVolume(storage.pHTankVol);
+  PhPump.SetTankFill(storage.AcidFill);
   ChlPump.SetFlowRate(storage.ChlPumpFR);
   ChlPump.SetTankVolume(storage.ChlTankVol);
+  ChlPump.SetTankFill(storage.ChlFill);
 
   //Define pins directions
   pinMode(FILTRATION_PUMP, OUTPUT);

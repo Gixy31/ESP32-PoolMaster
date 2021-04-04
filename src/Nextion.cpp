@@ -229,20 +229,20 @@ void UpdateTFT()
     else if (CurrentPage == 3)  myNex.writeStr(F("page3.p3StaSto.txt"), temp);
   }
 
-  if ((ChlPump.UpTime != TFTStruc.OrpPpRT) || ((int)(storage.ChlFill - ChlPump.GetTankUsage()) != TFTStruc.OrpTkFill) || !refresh)
+  if ((ChlPump.UpTime != TFTStruc.OrpPpRT) || ((int)ChlPump.GetTankFill() != TFTStruc.OrpTkFill) || !refresh)
   {
     TFTStruc.OrpPpRT = ChlPump.UpTime;
-    TFTStruc.OrpTkFill = (int)round((storage.ChlFill - ChlPump.GetTankUsage()));
+    TFTStruc.OrpTkFill = (int)round(ChlPump.GetTankFill());
 
     temp = String(TFTStruc.OrpTkFill) + (char)37 + F(" / ") + String(float(TFTStruc.OrpPpRT / 1000 / 60), 1) + F("min");
     myNex.writeStr(F("page0.vaOrpTk.txt"), temp);
     if (CurrentPage == 0)  myNex.writeStr(F("OrpTk.txt"), temp);
   }
 
-  if ((PhPump.UpTime != TFTStruc.pHPpRT) || ((int)(storage.AcidFill - PhPump.GetTankUsage()) != TFTStruc.pHTkFill) || !refresh)
+  if ((PhPump.UpTime != TFTStruc.pHPpRT) || ((int)PhPump.GetTankFill() != TFTStruc.pHTkFill) || !refresh)
   {
     TFTStruc.pHPpRT = PhPump.UpTime;
-    TFTStruc.pHTkFill = (int)round((storage.AcidFill - PhPump.GetTankUsage()));
+    TFTStruc.pHTkFill = (int)round(PhPump.GetTankFill());
 
     temp = String(TFTStruc.pHTkFill) + (char)37 + F(" / ") + String(float(TFTStruc.pHPpRT / 1000 / 60), 1) + F("min");
     myNex.writeStr(F("page0.vapHTk.txt"), temp);

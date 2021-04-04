@@ -16,6 +16,7 @@
 static uint8_t BitMap1 = 0;
 static uint8_t BitMap2 = 0;
 
+#ifdef DEVT
 static const char* PoolTopicMeas1 = "Home/Pool6/Meas1";
 static const char* PoolTopicMeas2 = "Home/Pool6/Meas2";
 static const char* PoolTopicSet1  = "Home/Pool6/Set1";
@@ -23,6 +24,15 @@ static const char* PoolTopicSet2  = "Home/Pool6/Set2";
 static const char* PoolTopicSet3  = "Home/Pool6/Set3";
 static const char* PoolTopicSet4  = "Home/Pool6/Set4";
 static const char* PoolTopicSet5  = "Home/Pool6/Set5";
+#else
+static const char* PoolTopicMeas1 = "Home/Pool/Meas1";
+static const char* PoolTopicMeas2 = "Home/Pool/Meas2";
+static const char* PoolTopicSet1  = "Home/Pool/Set1";
+static const char* PoolTopicSet2  = "Home/Pool/Set2";
+static const char* PoolTopicSet3  = "Home/Pool/Set3";
+static const char* PoolTopicSet4  = "Home/Pool/Set4";
+static const char* PoolTopicSet5  = "Home/Pool/Set5";
+#endif
 
 int freeRam(void);
 void stack_mon(UBaseType_t&);
@@ -105,7 +115,7 @@ void SettingsPublish(void *pvParameters)
         root["FSta"]   = storage.FiltrationStart;          //Computed filtration start hour, in the morning (hours)
         root["FStaM"]  = storage.FiltrationStartMin;       //Earliest Filtration start hour, in the morning (hours)
         root["FDu"]    = storage.FiltrationDuration;       //Computed filtration duration based on water temperature (hours)
-        root["FStoM"]  = storage.FiltrationStopMax;        //Latest hour for the filtration to run. Whatever happens, filtration won't run later than this hour (hour)
+        root["FStoM"]  = storage.FiltrationStopMax;        //Latest hour for the filtration to run. Whatever happens, filtration won't run later than this hour
         root["FSto"]   = storage.FiltrationStop;           //Computed filtration stop hour, equal to FSta + FDu (hour)
         root["pHUTL"]  = storage.PhPumpUpTimeLimit / 60;   //Max allowed daily run time for the pH pump (/!\ mins)
         root["ChlUTL"] = storage.ChlPumpUpTimeLimit / 60;  //Max allowed daily run time for the Chl pump (/!\ mins)
@@ -296,8 +306,8 @@ void MeasuresPublish(void *pvParameters)
         const int capacity = JSON_OBJECT_SIZE(4);
         StaticJsonDocument<capacity> root;
 
-        root["AcidF"] = storage.AcidFill - PhPump.GetTankUsage();
-        root["ChlF"]  = storage.ChlFill - ChlPump.GetTankUsage();
+        root["AcidF"] = PhPump.GetTankFill();
+        root["ChlF"]  = ChlPump.GetTankFill();
         root["IO"]    = BitMap1;
         root["IO2"]   = BitMap2;
 

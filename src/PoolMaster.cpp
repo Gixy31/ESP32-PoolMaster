@@ -63,8 +63,8 @@ void PoolMaster(void *pvParameters)
     if (hour() == 0 && !DoneForTheDay)
     {
         //First store current Chl and Acid consumptions of the day in Eeprom
-        storage.AcidFill = storage.AcidFill - PhPump.GetTankUsage();
-        storage.ChlFill = storage.ChlFill - ChlPump.GetTankUsage();
+        storage.AcidFill = PhPump.GetTankFill();
+        storage.ChlFill = ChlPump.GetTankFill();
         saveParam("AcidFill", storage.AcidFill);
         saveParam("ChlFill", storage.ChlFill);
 
