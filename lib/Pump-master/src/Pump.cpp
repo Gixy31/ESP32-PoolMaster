@@ -28,6 +28,7 @@ Pump::Pump(uint8_t PumpPin, uint8_t IsRunningSensorPin, uint8_t TankLevelPin,
   UpTime = 0;        
   UpTimeError = 0;
   MaxUpTime = DefaultMaxUpTime;
+  CurrMaxUpTime = MaxUpTime;
 }     
 
 //Call this in the main loop, for every loop, as often as possible
@@ -39,7 +40,7 @@ void Pump::loop()
     StartTime = millis();
   }
 
-  if((MaxUpTime > 0) && (UpTime >= MaxUpTime))
+  if((CurrMaxUpTime > 0) && (UpTime >= CurrMaxUpTime))
   {
     Stop();
     UpTimeError = true;
@@ -88,7 +89,7 @@ void Pump::ResetUpTime()
   StartTime = 0;
   StopTime = 0;
   UpTime = 0;
-  MaxUpTime = DefaultMaxUpTime;
+  CurrMaxUpTime = MaxUpTime;
 }
 
 //Set a maximum running time (in millisecs) per day (in case ResetUpTime() is called once per day)
@@ -97,14 +98,15 @@ void Pump::ResetUpTime()
 void Pump::SetMaxUpTime(unsigned long Max)
 {
   MaxUpTime = Max;
+  CurrMaxUpTime = MaxUpTime;
 }
 
-//Clear "UpTimeError" error flag and allow the pump to run for an extra 30mins
+//Clear "UpTimeError" error flag and allow the pump to run for an extra MaxUpTime
 void Pump::ClearErrors()
 {
   if(UpTimeError)
   {
-    MaxUpTime += DefaultMaxUpTime;
+    CurrMaxUpTime += MaxUpTime;
     UpTimeError = false;
   }
 }

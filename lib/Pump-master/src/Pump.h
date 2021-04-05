@@ -49,6 +49,7 @@ class Pump{
     
     unsigned long UpTime;
     unsigned long MaxUpTime;
+    unsigned long CurrMaxUpTime;
     bool UpTimeError;
     unsigned long StartTime;
     unsigned long LastStartTime;
