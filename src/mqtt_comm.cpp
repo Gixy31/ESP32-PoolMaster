@@ -140,7 +140,7 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
   //Pool commands. This check might be redundant since we only subscribed to this topic
   if (strcmp(topic,PoolTopicAPI)==0)
   {
-    static char Command[100] = "";
+    char Command[100] = "";
 
     for (uint8_t i=0 ; i<len ; i++){
       Command[i] = payload[i];

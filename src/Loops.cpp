@@ -199,7 +199,7 @@ void StatusLights(void *pvParameters)
     }
     (status & 0xF0) ? digitalWrite(BUZZER,HIGH) : digitalWrite(BUZZER,LOW) ;
     if(WiFi.status() == WL_CONNECTED) status |= 0x01;
-        else status |= 0x00;
+        else status &= 0xFE;
     Debug.print(DBG_VERBOSE,"Status LED : 0x%02x",status);
     lockI2C();
     Wire.beginTransmission(0x38);

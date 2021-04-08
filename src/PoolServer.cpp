@@ -55,8 +55,7 @@ void ProcessCommand(void *pvParameters)
       // Test if parsing succeeds.
       if (error)
       {
-        Debug.print(DBG_DEBUG,"Json parseObject() failed");
-        return;
+        Debug.print(DBG_WARNING,"Json parseObject() failed");
       }
       else
       {
@@ -305,14 +304,18 @@ void ProcessCommand(void *pvParameters)
         }
         else if (command.containsKey(F("OrpPIDWSize"))) //"OrpPIDWSize" command which sets the window size of the Orp PID loop
         {
-          storage.OrpPIDWindowSize = (unsigned long)command[F("OrpPIDWSize")];
+          storage.OrpPIDWindowSize = (unsigned long)command[F("OrpPIDWSize")]*60*1000;
           saveParam("OrpPIDWSize",storage.OrpPIDWindowSize);
+          OrpPID.SetSampleTime((int)storage.OrpPIDWindowSize);
+          OrpPID.SetOutputLimits(0, storage.OrpPIDWindowSize);  //Whatever happens, don't allow continuous injection of Chl for more than a PID Window
           PublishSettings();
         }
         else if (command.containsKey(F("PhPIDWSize"))) //"PhPIDWSize" command which sets the window size of the Ph PID loop
         {
-          storage.PhPIDWindowSize = (unsigned long)command[F("PhPIDWSize")];
+          storage.PhPIDWindowSize = (unsigned long)command[F("PhPIDWSize")]*60*1000;
           saveParam("PhPIDWSize",storage.PhPIDWindowSize);
+          PhPID.SetSampleTime((int)storage.PhPIDWindowSize);
+          PhPID.SetOutputLimits(0, storage.PhPIDWindowSize);    //Whatever happens, don't allow continuous injection of Acid for more than a PID Window
           PublishSettings();
         }
         else if (command.containsKey(F("Date"))) //"Date" command which sets the Date of RTC module
@@ -485,8 +488,6 @@ void ProcessCommand(void *pvParameters)
 
           if (ChlPump.UpTimeError)
             ChlPump.ClearErrors();
-
-          mqttErrorPublish("");
 
           //start filtration pump if within scheduled time slots
           if (!EmergencyStopFiltPump && storage.AutoMode && (hour() >= storage.FiltrationStart) && (hour() < storage.FiltrationStop))

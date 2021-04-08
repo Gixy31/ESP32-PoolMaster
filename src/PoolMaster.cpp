@@ -4,6 +4,8 @@
 #include "Config.h"
 #include "PoolMaster.h"
 
+static WiFiClient wificlient;
+
 // Functions prototypes
 void ProcessCommand(char*);
 void StartTime(void);
@@ -17,6 +19,7 @@ void SetOrpPID(bool);
 void mqttErrorPublish(const char*);
 void UpdateTFT(void);
 void stack_mon(UBaseType_t&);
+void Send_IFTTTNotif(void);
 
 void PoolMaster(void *pvParameters)
 {
@@ -196,6 +199,9 @@ void PoolMaster(void *pvParameters)
     //UPdate Nextion TFT
     UpdateTFT();
 
+    //Send IFTTT notifications if alarms occured
+    Send_IFTTTNotif();
+
     #ifdef CHRONO
     t_act = millis() - td;
     if(t_act > t_max) t_max = t_act;
@@ -253,4 +259,85 @@ void SetOrpPID(bool Enable)
     storage.OrpPIDOutput = 0.0;
     ChlPump.Stop();
   }
+}
+
+//Send notifications to IFTTT applet in case of alarm
+void Send_IFTTTNotif(){
+    static const String url1 = "/trigger/PoolMaster/with/key/PutYourIFTTTKeyHere";
+    String url2 = "";
+    static bool notif_sent[5] = {0,0,0,0,0};
+
+    if(PSIError)
+    {
+        if(!notif_sent[0])
+        {
+            if(wificlient.connect("maker.ifttt.com",80))
+            {
+                url2 = String("?value1=Water%20pressure&value2=");
+                if(storage.PSIValue <= storage.PSI_MedThreshold)
+                {
+                    url2 += String("Low");
+                } 
+                else if (storage.PSIValue >= storage.PSI_HighThreshold)
+                {
+                    url2 += String("High");
+                }
+                url2 += String("%20pressure:%20") + String(storage.PSIValue) + String("bar");
+                wificlient.print(String("POST ") + url1 + url2 + String(" HTTP/1.1\r\nHost: maker.ifttt.com\r\nConnection: close\r\n\r\n"));
+                notif_sent[0] = true;
+            }
+        }    
+    } else notif_sent[0] = false;
+
+    if(!ChlPump.TankLevel())
+    {
+        if(!notif_sent[1])
+        {
+            if(wificlient.connect("maker.ifttt.com",80))
+            {
+                url2 = String("?value1=Chl%20level&value2=") + String(ChlPump.GetTankFill()) + String("%");
+                wificlient.print(String("POST ") + url1 + url2 + String(" HTTP/1.1\r\nHost: maker.ifttt.com\r\nConnection: close\r\n\r\n"));
+                notif_sent[1] = true;
+            }
+        }
+    } else notif_sent[1] = false;
+
+    if(!PhPump.TankLevel())
+    {
+        if(!notif_sent[2])
+        {
+            if(wificlient.connect("maker.ifttt.com",80))
+            {
+                url2 = String("?value1=pH+%20level&value2=") + String(PhPump.GetTankFill()) + String("%");
+                wificlient.print(String("POST ") + url1 + url2 + String(" HTTP/1.1\r\nHost: maker.ifttt.com\r\nConnection: close\r\n\r\n"));
+                notif_sent[2] = true;
+            }
+        }
+    } else notif_sent[2] = false;
+
+    if(ChlPump.UpTimeError)
+    {
+        if(!notif_sent[3])
+        {
+            if(wificlient.connect("maker.ifttt.com",80))
+            {
+                url2 = String("?value1=Chl%20pump%20uptime&value2=") + String(round(ChlPump.UpTime/60000.)) + String("min");
+                wificlient.print(String("POST ") + url1 + url2 + String(" HTTP/1.1\r\nHost: maker.ifttt.com\r\nConnection: close\r\n\r\n"));
+                notif_sent[3] = true;
+            }
+        }
+    } else notif_sent[3] = false;
+
+    if(PhPump.UpTimeError)
+    {
+        if(!notif_sent[4])
+        {
+            if(wificlient.connect("maker.ifttt.com",80))
+            {
+                url2 = String("?value1=pH+%20pump%20uptime&value2=") + String(round(PhPump.UpTime/60000.)) + String("min");
+                wificlient.print(String("POST ") + url1 + url2 + String(" HTTP/1.1\r\nHost: maker.ifttt.com\r\nConnection: close\r\n\r\n"));
+                notif_sent[4] = true;
+            }
+        }
+    } else notif_sent[4] = false;     
 }

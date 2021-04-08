@@ -22,7 +22,7 @@ double ChlCumul = 0.;
 #endif
 
 // Firmware revision
-String Firmw = "ESP-2.3";
+String Firmw = "ESP-2.4";
 
 //Settings structure and its default values
 StoreStruct storage =
@@ -154,14 +154,6 @@ void setup()
 
   }  
 
-  //Initialize pump objects with stored config data
-  PhPump.SetFlowRate(storage.pHPumpFR);
-  PhPump.SetTankVolume(storage.pHTankVol);
-  PhPump.SetTankFill(storage.AcidFill);
-  ChlPump.SetFlowRate(storage.ChlPumpFR);
-  ChlPump.SetTankVolume(storage.ChlTankVol);
-  ChlPump.SetTankFill(storage.ChlFill);
-
   //Define pins directions
   pinMode(FILTRATION_PUMP, OUTPUT);
   pinMode(PH_PUMP, OUTPUT);
@@ -253,11 +245,20 @@ void setup()
   SetPhPID (false);
   SetOrpPID(false);
 
-  // Initialize pumps
+  //Initialize pump instances with stored config data
   FiltrationPump.SetMaxUpTime(0);     //no runtime limit for the filtration pump
-  PhPump.SetMaxUpTime(storage.PhPumpUpTimeLimit * 1000);
-  ChlPump.SetMaxUpTime(storage.ChlPumpUpTimeLimit * 1000);
+
   RobotPump.SetMaxUpTime(0);          //no runtime limit for the robot pump
+
+  PhPump.SetFlowRate(storage.pHPumpFR);
+  PhPump.SetTankVolume(storage.pHTankVol);
+  PhPump.SetTankFill(storage.AcidFill);
+  PhPump.SetMaxUpTime(storage.PhPumpUpTimeLimit * 1000);
+
+  ChlPump.SetFlowRate(storage.ChlPumpFR);
+  ChlPump.SetTankVolume(storage.ChlTankVol);
+  ChlPump.SetTankFill(storage.ChlFill);
+  ChlPump.SetMaxUpTime(storage.ChlPumpUpTimeLimit * 1000);
 
   // Start filtration pump at power-on if within scheduled time slots -- You can choose not to do this and start pump manually
   if (storage.AutoMode && (hour() >= storage.FiltrationStart) && (hour() < storage.FiltrationStop))
@@ -270,7 +271,8 @@ void setup()
   // Create queue for external commands
   queueIn = xQueueCreate((UBaseType_t)QUEUE_ITEMS_NBR,(UBaseType_t)QUEUE_ITEM_SIZE);
 
-  // Create tasks in the scheduler.
+  // Create loop tasks in the scheduler.
+  //------------------------------------
   int app_cpu = xPortGetCoreID();
 
   Debug.print(DBG_DEBUG,"Creating loop Tasks");
@@ -366,7 +368,7 @@ void setup()
     app_cpu
   );
 
-  // Settings MQTT publish 
+  // MQTT Settings publish 
   xTaskCreatePinnedToCore(
     SettingsPublish,
     "SettingsPublish",
@@ -378,6 +380,7 @@ void setup()
   );
 
   // Initialize OTA (On The Air update)
+  //-----------------------------------
   ArduinoOTA.setPort(OTA_PORT);
   ArduinoOTA.setHostname("PoolMaster");
   ArduinoOTA.setPasswordHash("510179c0211489b9625a5f2e41da8469"); // hash de Fgixy001
@@ -416,8 +419,6 @@ void setup()
   startTasks = true;
 
   delay(1000);          // wait for tasks to start
-
-//  PublishSettings();    // notify Settings publish task -> Task will publish once when activated
 
 }
 
