@@ -93,11 +93,13 @@ void PoolMaster(void *pvParameters)
     }
 
     // Compute next Filtering duration and start/stop hours at 15:00 (to filter during the hotest period of the day)
+    // Wait at least 5mn after filtration start in order to let the temperature stabilizes in pipes, and to avoid
+    // taking into account not yet measured temperature if the system starts at 15:xx. 
     // Depending on water temperature, the filtration duration is either 2 hours, temp/3 or temp/2 hours.
     #ifdef DEBUG
-    if (second() == 0 && !d_calc)
+    if (second() == 0 && (millis() - FiltrationPump.LastStartTime) > 300000 && !d_calc)
     #else
-    if (hour() == 15 && !d_calc)
+    if (hour() == 15 && (millis() - FiltrationPump.LastStartTime) > 300000 && !d_calc)
     #endif
     {
         if (storage.TempValue < storage.WaterTempLowThreshold){
