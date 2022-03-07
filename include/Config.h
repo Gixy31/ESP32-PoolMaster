@@ -1,3 +1,17 @@
+// Firmware revision
+#define FIRMW "ESP-2.A"
+
+// WiFi credentials
+#define WIFI_NETWORK "YOUR_WIFI_NETWORK_ID"
+#define WIFI_PASSWORD "YOUR_WIFI_NETWORK_PWD"
+
+//IFTTT key to trigger event
+#define IFTTT_key "/trigger/PoolMaster/with/key/Your_IFTTT_Key"
+
+// PID Directions (either DIRECT or REVERSE depending on Ph/Orp correction vs water properties)
+#define PhPID_DIRECTION REVERSE
+#define OrpPID_DIRECTION DIRECT
+
 #define FILTRATION_PUMP 32
 #define ROBOT_PUMP	    33
 #define PH_PUMP         25
@@ -34,7 +48,7 @@
 
 //Version of config stored in EEPROM
 //Random value. Change this value (to any other value) to revert the config to default values
-#define CONFIG_VERSION 1
+#define CONFIG_VERSION 50
 
 //MQTT stuff including local broker/server IP address, login and pwd
 //------------------------------------------------------------------

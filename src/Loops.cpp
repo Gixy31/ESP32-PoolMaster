@@ -262,12 +262,13 @@ void pHRegulation(void *pvParameters)
       /************************************************
        turn the Acid pump on/off based on pid output
       ************************************************/
-      if (millis() - storage.PhPIDwindowStartTime > storage.PhPIDWindowSize)
+	  unsigned long now = millis();
+      if (now - storage.PhPIDwindowStartTime > storage.PhPIDWindowSize)
       {
         //time to shift the Relay Window
         storage.PhPIDwindowStartTime += storage.PhPIDWindowSize;
       }
-      if (storage.PhPIDOutput < millis() - storage.PhPIDwindowStartTime)
+      if ((unsigned long)storage.PhPIDOutput <= now - storage.PhPIDwindowStartTime)
         PhPump.Stop();
       else
         PhPump.Start();   
@@ -329,12 +330,13 @@ void OrpRegulation(void *pvParameters)
       /************************************************
        turn the Chl pump on/off based on pid output
       ************************************************/
-      if (millis() - storage.OrpPIDwindowStartTime > storage.OrpPIDWindowSize)
+	  unsigned long now = millis();
+      if (now - storage.OrpPIDwindowStartTime > storage.OrpPIDWindowSize)
       {
         //time to shift the Relay Window
         storage.OrpPIDwindowStartTime += storage.OrpPIDWindowSize;
       }
-      if (storage.OrpPIDOutput < millis() - storage.OrpPIDwindowStartTime)
+      if ((unsigned long)storage.OrpPIDOutput <= now - storage.OrpPIDwindowStartTime)
         ChlPump.Stop();
       else
         ChlPump.Start();

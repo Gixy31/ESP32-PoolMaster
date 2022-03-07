@@ -6,9 +6,6 @@
 #include "Config.h"
 #include "PoolMaster.h"
 
-#define WIFI_NETWORK "YOUR_SSID"
-#define WIFI_PASSWORD "YOUR_PWD"
-
 AsyncMqttClient mqttClient;
 
 bool MQTTConnection = false;           // Status of connection to broker
@@ -106,7 +103,7 @@ void WiFiEvent(WiFiEvent_t event){
 
 // Once connected to MQTT broker, subscribe to the PoolTopicAPI topic in order to receive future commands
 // then publish the "online" message on the "status" topic. If Ethernet connection is ever lost
-// "status" will switch to "offline". Very useful to check that the Arduino is alive and functional
+// "status" will switch to "offline". Very useful to check that the system is alive and functional
 void onMqttConnect(bool sessionPresent){
   Debug.print(DBG_INFO,"Connected to MQTT, present session: %d",sessionPresent);
   mqttClient.subscribe(PoolTopicAPI,2);

@@ -265,7 +265,7 @@ void SetOrpPID(bool Enable)
 
 //Send notifications to IFTTT applet in case of alarm
 void Send_IFTTTNotif(){
-    static const String url1 = "/trigger/PoolMaster/with/key/PutYourIFTTTKeyHere";
+    static const String url1 = IFTTT_key;
     String url2 = "";
     static bool notif_sent[5] = {0,0,0,0,0};
 

@@ -75,6 +75,4 @@ extern volatile bool startTasks;                                // flag to start
 extern bool MQTTConnection;                            // MQTT connected flag
 extern bool EmergencyStopFiltPump;                     // Filtering pump stopped manually; needs to be cleared to restart
 extern bool AntiFreezeFiltering;                       // Filtration anti freeze mode
-extern bool PhLevelError;                              // PH tank level alarm
-extern bool ChlLevelError;                             // Cl tank level alarm
 extern bool PSIError;                                  // Water pressure alarm

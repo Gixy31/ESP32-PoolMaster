@@ -234,7 +234,7 @@ void UpdateTFT()
     TFTStruc.OrpPpRT = ChlPump.UpTime;
     TFTStruc.OrpTkFill = (int)round(ChlPump.GetTankFill());
 
-    temp = String(TFTStruc.OrpTkFill) + (char)37 + F(" / ") + String(float(TFTStruc.OrpPpRT / 1000 / 60), 1) + F("min");
+    temp = String(TFTStruc.OrpTkFill) + (char)37 + F(" / ") + String(float(TFTStruc.OrpPpRT)/1000./60., 1) + F("min");
     myNex.writeStr(F("page0.vaOrpTk.txt"), temp);
     if (CurrentPage == 0)  myNex.writeStr(F("OrpTk.txt"), temp);
   }
@@ -244,7 +244,7 @@ void UpdateTFT()
     TFTStruc.pHPpRT = PhPump.UpTime;
     TFTStruc.pHTkFill = (int)round(PhPump.GetTankFill());
 
-    temp = String(TFTStruc.pHTkFill) + (char)37 + F(" / ") + String(float(TFTStruc.pHPpRT / 1000 / 60), 1) + F("min");
+    temp = String(TFTStruc.pHTkFill) + (char)37 + F(" / ") + String(float(TFTStruc.pHPpRT)/1000./60., 1) + F("min");
     myNex.writeStr(F("page0.vapHTk.txt"), temp);
     if (CurrentPage == 0)  myNex.writeStr(F("pHTk.txt"), temp);
   }

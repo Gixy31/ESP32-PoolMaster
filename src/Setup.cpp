@@ -22,19 +22,21 @@ double ChlCumul = 0.;
 #endif
 
 // Firmware revision
-String Firmw = "ESP-2.4";
+String Firmw = FIRMW;
 
 //Settings structure and its default values
+// si pH+ : Kp=2250000.
+// si pH- : Kp=2700000.
 StoreStruct storage =
 { 
   CONFIG_VERSION,
   0, 0, 1, 0,
-  12, 8, 22, 8, 22, 10,
-  1800, 1800, 30000,
-  1200000, 1200000, 0, 0,
-  7.3, 750.0, 1.8, 0.7, 10.0, 18.0, 3.0, 3.507951, -1.923527, -972.741849, 2477.392837, 1.0, 0.0,
-  2250000.0, 0.0, 0.0, 18000.0, 0.0, 0.0, 0.0, 0.0, 28.0, 7.3, 750., 1.3,
-  100.0, 100.0, 20.0, 20.0, 1.5, 1.5
+  10, 10, 20, 8, 22, 20,
+  2700, 2700, 30000,
+  1800000, 1800000, 0, 0,
+  7.3, 720.0, 1.8, 0.7, 10.0, 18.0, 3.0, 3.49625783, -2.011338191, -876.430775, 2328.8985, 1.0, 0.0,
+  2700000.0, 0.0, 0.0, 18000.0, 0.0, 0.0, 0.0, 0.0, 28.0, 7.3, 720., 1.3,
+  60.0, 85.0, 20.0, 20.0, 1.5, 1.5
 };
 
 tm timeinfo;
@@ -68,8 +70,8 @@ Pump RobotPump(ROBOT_PUMP, ROBOT_PUMP, NO_TANK, FILTRATION_PUMP);
 
 // PIDs instances
 //Specify the direction and initial tuning parameters
-PID PhPID(&storage.PhValue, &storage.PhPIDOutput, &storage.Ph_SetPoint, storage.Ph_Kp, storage.Ph_Ki, storage.Ph_Kd, DIRECT);
-PID OrpPID(&storage.OrpValue, &storage.OrpPIDOutput, &storage.Orp_SetPoint, storage.Orp_Kp, storage.Orp_Ki, storage.Orp_Kd, DIRECT);
+PID PhPID(&storage.PhValue, &storage.PhPIDOutput, &storage.Ph_SetPoint, storage.Ph_Kp, storage.Ph_Ki, storage.Ph_Kd, PhPID_DIRECTION);
+PID OrpPID(&storage.OrpValue, &storage.OrpPIDOutput, &storage.Orp_SetPoint, storage.Orp_Kp, storage.Orp_Ki, storage.Orp_Kd, OrpPID_DIRECTION);
 
 // Publishing tasks handles to notify them
 static TaskHandle_t pubSetTaskHandle;
@@ -232,12 +234,12 @@ void setup()
   // Limit the PIDs output range in order to limit max. pumps runtime (safety first...)
 
   PhPID.SetTunings(storage.Ph_Kp, storage.Ph_Ki, storage.Ph_Kd);
-  PhPID.SetControllerDirection(DIRECT);
+  PhPID.SetControllerDirection(PhPID_DIRECTION);
   PhPID.SetSampleTime((int)storage.PhPIDWindowSize);
   PhPID.SetOutputLimits(0, storage.PhPIDWindowSize);    //Whatever happens, don't allow continuous injection of Acid for more than a PID Window
 
   OrpPID.SetTunings(storage.Orp_Kp, storage.Orp_Ki, storage.Orp_Kd);
-  OrpPID.SetControllerDirection(DIRECT);
+  OrpPID.SetControllerDirection(OrpPID_DIRECTION);
   OrpPID.SetSampleTime((int)storage.OrpPIDWindowSize);
   OrpPID.SetOutputLimits(0, storage.OrpPIDWindowSize);  //Whatever happens, don't allow continuous injection of Chl for more than a PID Window
 

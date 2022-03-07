@@ -7,7 +7,6 @@
 #include "PoolMaster.h"
 
 // Functions prototypes
-void mqttErrorPublish(const char*);
 bool saveParam(const char*,uint8_t );
 bool saveParam(const char*,bool );
 bool saveParam(const char*,unsigned long );
@@ -246,7 +245,7 @@ void ProcessCommand(void *pvParameters)
           PhPump.SetTankVolume(storage.pHTankVol);
           storage.AcidFill = (double)command[F("pHTank")][1];
           PhPump.SetTankFill(storage.AcidFill);
-          PhPump.ResetUpTime();
+        //  PhPump.ResetUpTime();
           saveParam("pHTankVol",storage.pHTankVol);
           saveParam("AcidFill",storage.AcidFill);               
           PublishSettings();
@@ -259,7 +258,7 @@ void ProcessCommand(void *pvParameters)
           ChlPump.SetTankVolume(storage.ChlTankVol);
           storage.ChlFill = (double)command[F("ChlTank")][1];
           ChlPump.SetTankFill(storage.ChlFill);
-          ChlPump.ResetUpTime();
+        //  ChlPump.ResetUpTime();
           saveParam("ChlTankVol",storage.ChlTankVol);
           saveParam("ChlFill",storage.ChlFill);
           PublishSettings();
@@ -352,6 +351,12 @@ void ProcessCommand(void *pvParameters)
           saveParam("PSI_High",storage.PSI_HighThreshold);
           PublishSettings();
         }
+        else if (command.containsKey(F("PSILow"))) //"PSILow" command which sets the water low-pressure threshold
+        {
+          storage.PSI_MedThreshold = (double)command[F("PSILow")];
+          saveParam("PSI_Med",storage.PSI_MedThreshold);
+          PublishSettings();
+        }         
         else if (command.containsKey(F("pHPumpFR")))//"PhPumpFR" set flow rate of Ph pump
         {
           storage.pHPumpFR = (double)command[F("pHPumpFR")];
