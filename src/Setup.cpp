@@ -1,6 +1,7 @@
 #undef __STRICT_ANSI__              // work-around for Time Zone definition
 #include <stdint.h>                 // std lib (types definitions)
 #include <Arduino.h>                // Arduino framework
+#include <esp_sntp.h>
 
 #include "Config.h"
 #include "PoolMaster.h"
@@ -31,10 +32,10 @@ StoreStruct storage =
 { 
   CONFIG_VERSION,
   0, 0, 1, 0,
-  10, 10, 20, 8, 22, 20,
+  13, 8, 21, 8, 22, 20,
   2700, 2700, 30000,
   1800000, 1800000, 0, 0,
-  7.3, 720.0, 1.8, 0.7, 10.0, 18.0, 3.0, 3.49625783, -2.011338191, -876.430775, 2328.8985, 1.0, 0.0,
+  7.3, 720.0, 1.8, 0.7, 10.0, 18.0, 3.0, 3.48464236, -2.27151021, -951.822669, 2421.45966, 1.0, 0.0,
   2700000.0, 0.0, 0.0, 18000.0, 0.0, 0.0, 0.0, 0.0, 28.0, 7.3, 720., 1.3,
   60.0, 85.0, 20.0, 20.0, 1.5, 1.5
 };
@@ -629,14 +630,19 @@ void StartTime(){
   configTime(0, 0,"0.pool.ntp.org","1.pool.ntp.org","2.pool.ntp.org"); // 3 possible NTP servers
   setenv("TZ","CET-1CEST,M3.5.0/2,M10.5.0/3",3);                       // configure local time with automatic DST  
   tzset();
-  delay(200);
+  int retry = 0;
+  const int retry_count = 15;
+  while(sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && ++retry < retry_count){
+    Serial.print(".");
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+  }
+  Serial.println("");
   Debug.print(DBG_INFO,"NTP configured");
 }
 
 void readLocalTime(){
-  if(!getLocalTime(&timeinfo)){
+  if(!getLocalTime(&timeinfo,5000U)){
     Debug.print(DBG_WARNING,"Failed to obtain time");
-    StartTime();
   }
   Serial.println(&timeinfo,"%A, %B %d %Y %H:%M:%S");
 }
