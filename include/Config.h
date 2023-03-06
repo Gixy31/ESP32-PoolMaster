@@ -58,6 +58,14 @@
 #define MQTT_SERVER_IP IPAddress(192, 168, 1, 51)
 #define MQTT_SERVER_PORT 1883
 
+//#define MQTT_LOGIN                                              // uncomment if MQTT broker needs login/pwd
+
+#ifdef MQTT_LOGIN
+  static const char* MqttServerClientID = "ESP32Pool";            // /!\ choose a client ID which is unique to this Arduino board
+  static const char* MqttServerLogin    = nullptr;                //replace by const char* MqttServerLogin = nullptr; in case broker does not require a login/pwd
+  static const char* MqttServerPwd      = nullptr;                //replace by const char* MqttServerPwd = nullptr; in case broker does not require a login/pwd
+#endif  
+
 //Display timeout before blanking
 #define TFT_SLEEP 60000L 
 

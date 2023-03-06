@@ -12,9 +12,6 @@ bool MQTTConnection = false;           // Status of connection to broker
 static TimerHandle_t mqttReconnectTimer;      // Reconnect timer for MQTT
 static TimerHandle_t wifiReconnectTimer;      // Reconnect timer for WiFi
 
-// static const char* MqttServerClientID = "ESP32Pool";            // /!\ choose a client ID which is unique to this Arduino board
-// static const char* MqttServerLogin    = nullptr;                //replace by const char* MqttServerLogin = nullptr; in case broker does not require a login/pwd
-// static const char* MqttServerPwd      = nullptr;                //replace by const char* MqttServerPwd = nullptr; in case broker does not require a login/pwd
 #ifdef DEVT
 static const char* PoolTopicAPI       = "Home/Pool6/API";
 static const char* PoolTopicStatus    = "Home/Pool6/status";
@@ -55,6 +52,10 @@ void mqttInit() {
   mqttClient.onMessage(onMqttMessage);
   mqttClient.onPublish(onMqttPublish);
   mqttClient.setServer(MQTT_SERVER_IP,MQTT_SERVER_PORT);
+#ifdef MQTT_LOGIN  
+  mqttClient.setCredentialId(MqttServerLogin,MqttServerPwd);
+  mqttClient.setClientId(MqttServerClientID);
+#endif  
 } 
 
 void mqttErrorPublish(const char* Payload){
