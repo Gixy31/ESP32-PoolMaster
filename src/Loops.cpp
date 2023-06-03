@@ -2,6 +2,8 @@
 #include "Config.h"
 #include "PoolMaster.h"
 
+#define NB_SUB_SAMPLE 3             // Number of analog value to take before having an accurate value
+
 // Setup oneWire instances to communicate with temperature sensors (one bus per sensor)
 static OneWire oneWire_W(ONE_WIRE_BUS_W);
 static OneWire oneWire_A(ONE_WIRE_BUS_A);
@@ -13,7 +15,7 @@ static DeviceAddress DS18B20_W = { 0x28, 0x9F, 0x24, 0x24, 0x0C, 0x00, 0x00, 0xA
 static DeviceAddress DS18B20_A = { 0x28, 0xB0, 0x70, 0x75, 0xD0, 0x01, 0x3C, 0x9D };
 
 // Setup an ADS1115 instance for analog measurements
-static ADS1115Scanner adc(0x48);  // Address 0x48 is the default
+static Adafruit_ADS1115 adc;      // Address 0x48 is the default
 static float ph_sensor_value;     // pH sensor current value
 static float orp_sensor_value;    // ORP sensor current value
 static float psi_sensor_value;    // PSI sensor current value
@@ -24,6 +26,13 @@ static RunningMedian samples_ATemp = RunningMedian(11);
 static RunningMedian samples_Ph    = RunningMedian(11);
 static RunningMedian samples_Orp   = RunningMedian(11);
 static RunningMedian samples_PSI   = RunningMedian(11);
+
+static RunningMedian sub_samples_Ph  = RunningMedian(NB_SUB_SAMPLE);
+static RunningMedian sub_samples_Orp = RunningMedian(NB_SUB_SAMPLE);
+static RunningMedian sub_samples_PSI = RunningMedian(NB_SUB_SAMPLE);
+
+static byte sub_sample_index_probe  = 0; // First average index before using samples
+static byte sub_sample_index        = 0; // First average index before using samples
 
 void stack_mon(UBaseType_t&);
 void lockI2C();
@@ -41,11 +50,8 @@ void unlockI2C();
 
 void AnalogInit()
 {
-  adc.setSpeed(ADS1115_SPEED_16SPS);
-  adc.addChannel(ADS1115_CHANNEL0, ADS1115_RANGE_6144);
-  adc.addChannel(ADS1115_CHANNEL1, ADS1115_RANGE_6144);
-  adc.addChannel(ADS1115_CHANNEL2, ADS1115_RANGE_6144);
-  adc.setSamples(3);
+  adc.setDataRate(RATE_ADS1115_16SPS);
+  adc.setGain(GAIN_TWOTHIRDS);
 }
 
 void AnalogPoll(void *pvParameters)
@@ -64,7 +70,10 @@ void AnalogPoll(void *pvParameters)
   #endif
 
   lockI2C();
-  adc.start();
+  if (!adc.begin()) {
+    Debug.print(DBG_ERROR,"Failed to initialize ADS.");
+  }
+  adc.startADCReading(ADS1X15_REG_CONFIG_MUX_SINGLE_0, /*continuous=*/false);
   unlockI2C();
   vTaskDelayUntil(&ticktime,period);
   
@@ -75,14 +84,34 @@ void AnalogPoll(void *pvParameters)
     #endif
 
     lockI2C();
-    adc.update();
+    
+    //sub channels loop
+    if(adc.conversionComplete()){
+      switch (sub_sample_index_probe) {
+        case 0:
+          sub_samples_Orp.add(adc.getLastConversionResults());
+          adc.startADCReading(ADS1X15_REG_CONFIG_MUX_SINGLE_1, /*continuous=*/false);
+          break;
+        case 1:
+          sub_samples_Ph.add(adc.getLastConversionResults());
+          adc.startADCReading(ADS1X15_REG_CONFIG_MUX_SINGLE_2, /*continuous=*/false);
+          break;
+        case 2:
+          sub_samples_PSI.add(adc.getLastConversionResults());
+          adc.startADCReading(ADS1X15_REG_CONFIG_MUX_SINGLE_0, /*continuous=*/false);
+          sub_sample_index++;
+          break;
+      }
+      sub_sample_index_probe = sub_sample_index_probe++ % 3;
+    }
 
-    if(adc.ready()){                              // all conversions done ?
-        orp_sensor_value = adc.readFilter(0) ;    // ORP sensor current value
-        ph_sensor_value  = adc.readFilter(1) ;    // pH sensor current value
-        psi_sensor_value = adc.readFilter(2) ;    // psi sensor current value
-        adc.start();  
+    if(sub_sample_index == NB_SUB_SAMPLE){           // all conversions done ?
+        sub_sample_index = 0;
         
+        orp_sensor_value = sub_samples_Orp.getAverage(NB_SUB_SAMPLE) ; // ORP sensor current value
+        ph_sensor_value  = sub_samples_Ph.getAverage(NB_SUB_SAMPLE) ;  // pH sensor current value
+        psi_sensor_value = sub_samples_PSI.getAverage(NB_SUB_SAMPLE) ; // psi sensor current value
+
         //Ph
         samples_Ph.add(ph_sensor_value);          // compute average of pH from center 5 measurements among 11
         storage.PhValue = (samples_Ph.getAverage(5)*0.1875/1000.)*storage.pHCalibCoeffs0 + storage.pHCalibCoeffs1;
@@ -114,7 +143,7 @@ void AnalogPoll(void *pvParameters)
 #endif
 
         //ORP
-        samples_Orp.add(orp_sensor_value);                                                                    // compute average of ORP from last 5 measurements
+        samples_Orp.add(orp_sensor_value);        // compute average of ORP from last 5 measurements
         storage.OrpValue = (samples_Orp.getAverage(5)*0.1875/1000.)*storage.OrpCalibCoeffs0 + storage.OrpCalibCoeffs1;
 
 #ifdef SIMU
@@ -132,7 +161,7 @@ void AnalogPoll(void *pvParameters)
 #endif
 
         //PSI (water pressure)
-        samples_PSI.add(psi_sensor_value);                                                                    // compute average of PSI from last 5 measurements
+        samples_PSI.add(psi_sensor_value);        // compute average of PSI from last 5 measurements
         storage.PSIValue = (samples_PSI.getAverage(5)*0.1875/1000.)*storage.PSICalibCoeffs0 + storage.PSICalibCoeffs1;
 
         Debug.print(DBG_DEBUG,"pH: %5.0f - %4.2f - ORP: %5.0f - %3.0fmV - PSI: %5.0f - %4.2fBar\r",

@@ -27,7 +27,7 @@
 #include <ESPmDNS.h>              // mDNS
 #include <ArduinoOTA.h>           // On The Air WiFi update 
 #include "AsyncMqttClient.h"      // Async. MQTT client
-#include "ADS1115.h"              // ADS1115 sensors library
+#include <Adafruit_ADS1X15.h>     // ADS1115 sensors library
 
 // General shared data structure
 struct StoreStruct
@@ -71,7 +71,7 @@ extern String Firmw;
 extern AsyncMqttClient mqttClient;                     // MQTT async. client
 
 // Various flags
-extern volatile bool startTasks;                                // flag to start loop tasks       
+extern volatile bool startTasks;                       // flag to start loop tasks       
 extern bool MQTTConnection;                            // MQTT connected flag
 extern bool EmergencyStopFiltPump;                     // Filtering pump stopped manually; needs to be cleared to restart
 extern bool AntiFreezeFiltering;                       // Filtration anti freeze mode
