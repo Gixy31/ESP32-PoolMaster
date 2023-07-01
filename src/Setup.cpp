@@ -386,7 +386,7 @@ void setup()
   //-----------------------------------
   ArduinoOTA.setPort(OTA_PORT);
   ArduinoOTA.setHostname("PoolMaster");
-  ArduinoOTA.setPasswordHash("510179c0211489b9625a5f2e41da8469"); // hash de Fgixy001
+  ArduinoOTA.setPasswordHash("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"); // hash du pwd
   
   ArduinoOTA.onStart([]() {
     String type;

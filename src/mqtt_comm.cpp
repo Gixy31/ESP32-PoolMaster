@@ -7,6 +7,11 @@
 #include "PoolMaster.h"
 
 AsyncMqttClient mqttClient;
+#ifdef MQTT_LOGIN
+ static const char* MqttServerClientID = "ESP32Pool";  // /!\ choose a client ID which is unique to this Arduino board
+ static const char* MqttServerLogin    = nullptr;      //replace by const char* MqttServerLogin = nullptr; in case broker does not require a login/pwd
+ static const char* MqttServerPwd      = nullptr;      //replace by const char* MqttServerPwd = nullptr; in case broker does not require a login/pwd
+#endif
 
 bool MQTTConnection = false;           // Status of connection to broker
 static TimerHandle_t mqttReconnectTimer;      // Reconnect timer for MQTT
@@ -53,7 +58,7 @@ void mqttInit() {
   mqttClient.onPublish(onMqttPublish);
   mqttClient.setServer(MQTT_SERVER_IP,MQTT_SERVER_PORT);
 #ifdef MQTT_LOGIN  
-  mqttClient.setCredentialId(MqttServerLogin,MqttServerPwd);
+  mqttClient.setCredentials(MqttServerLogin,MqttServerPwd);
   mqttClient.setClientId(MqttServerClientID);
 #endif  
 } 
