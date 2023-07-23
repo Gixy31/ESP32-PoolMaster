@@ -57,6 +57,7 @@ void mqttInit() {
   mqttClient.onMessage(onMqttMessage);
   mqttClient.onPublish(onMqttPublish);
   mqttClient.setServer(MQTT_SERVER_IP,MQTT_SERVER_PORT);
+  mqttClient.setWill(PoolTopicStatus,1,true,"{\"PoolMaster Online\":0}");
 #ifdef MQTT_LOGIN  
   mqttClient.setCredentials(MqttServerLogin,MqttServerPwd);
   mqttClient.setClientId(MqttServerClientID);
