@@ -12,6 +12,7 @@ bool saveParam(const char*,bool );
 bool saveParam(const char*,unsigned long );
 bool saveParam(const char*,double );
 void PublishSettings(void);
+void mqttErrorPublish(const char*);
 void simpLinReg(float * , float * , double & , double &, int );
 void ProcessCommand(char*);
 void PublishMeasures();
@@ -493,6 +494,8 @@ void ProcessCommand(void *pvParameters)
 
           if (ChlPump.UpTimeError)
             ChlPump.ClearErrors();
+
+          mqttErrorPublish(""); // publish clearing of error(s)
 
           //start filtration pump if within scheduled time slots
           if (!EmergencyStopFiltPump && storage.AutoMode && (hour() >= storage.FiltrationStart) && (hour() < storage.FiltrationStop))
