@@ -7,8 +7,6 @@
 static WiFiClient wificlient;
 
 // Functions prototypes
-void ProcessCommand(char*);
-void StartTime(void);
 void readLocalTime(void);
 bool saveParam(const char*,uint8_t );
 bool saveParam(const char*,bool );
@@ -17,7 +15,7 @@ bool saveParam(const char*,double );
 void SetPhPID(bool);
 void SetOrpPID(bool);
 void mqttErrorPublish(const char*);
-void publishSettings(void);
+void PublishSettings(void);
 void UpdateTFT(void);
 void stack_mon(UBaseType_t&);
 void Send_IFTTTNotif(void);
@@ -123,7 +121,7 @@ void PoolMaster(void *pvParameters)
         Debug.print(DBG_INFO,"Filtration duration: %dh",storage.FiltrationDuration);
         Debug.print(DBG_INFO,"Start: %dh - Stop: %dh",storage.FiltrationStart,storage.FiltrationStop);
 
-        publishSettings();
+        PublishSettings();
 
         d_calc = true;
     }

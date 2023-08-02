@@ -14,7 +14,6 @@ bool saveParam(const char*,double );
 void PublishSettings(void);
 void mqttErrorPublish(const char*);
 void simpLinReg(float * , float * , double & , double &, int );
-void ProcessCommand(char*);
 void PublishMeasures();
 void SetPhPID(bool);
 void SetOrpPID(bool);
