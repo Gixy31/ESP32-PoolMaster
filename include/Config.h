@@ -10,7 +10,7 @@
 // WiFi credentials
 #define WIFI_NETWORK "YOUR_WIFI_NETWORK_ID"
 #define WIFI_PASSWORD "YOUR_WIFI_NETWORK_PWD"
-#define OTA_PWDHASH   "510179c0211489b9625a5f2e41da8469"
+#define OTA_PWDHASH   "Your_OTA_password_hash"
 
 //IFTTT key to trigger event
 #define IFTTT_key "/trigger/PoolMaster/with/key/Your_IFTTT_Key"
