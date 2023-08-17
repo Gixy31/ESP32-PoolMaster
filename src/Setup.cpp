@@ -35,9 +35,9 @@ StoreStruct storage =
   13, 8, 21, 8, 22, 20,
   2700, 2700, 30000,
   1800000, 1800000, 0, 0,
-  7.3, 720.0, 1.8, 0.7, 10.0, 18.0, 3.0, 3.48464236, -2.27151021, -951.822669, 2421.45966, 1.0, 0.0,
+  7.3, 720.0, 1.8, 0.7, 10.0, 18.0, 3.0, 3.51449558, -2.73006544, -929.75615, 2454.70009, 1.31, -0.1,
   2700000.0, 0.0, 0.0, 18000.0, 0.0, 0.0, 0.0, 0.0, 28.0, 7.3, 720., 1.3,
-  60.0, 85.0, 20.0, 20.0, 1.5, 1.5
+  25.0, 60.0, 20.0, 20.0, 1.5, 1.5
 };
 
 tm timeinfo;
@@ -48,6 +48,7 @@ volatile bool startTasks = false;               // Signal to start loop tasks
 bool AntiFreezeFiltering = false;               // Filtration anti freeze mode
 bool EmergencyStopFiltPump = false;             // flag will be (re)set by double-tapp button
 bool PSIError = false;                          // Water pressure OK
+bool cleaning_done = false;                     // daily cleaning done   
 
 // Queue object to store incoming JSON commands (up to 10)
 QueueHandle_t queueIn;
@@ -298,7 +299,7 @@ void setup()
   xTaskCreatePinnedToCore(
     ProcessCommand,
     "ProcessCommand",
-    3072,
+    3584,
     NULL,
     1,
     nullptr,
@@ -375,7 +376,7 @@ void setup()
   xTaskCreatePinnedToCore(
     SettingsPublish,
     "SettingsPublish",
-    3072,
+    3584,
     NULL,
     1,
     &pubSetTaskHandle,                // needed to notify task later
@@ -386,7 +387,7 @@ void setup()
   //-----------------------------------
   ArduinoOTA.setPort(OTA_PORT);
   ArduinoOTA.setHostname("PoolMaster");
-  ArduinoOTA.setPasswordHash("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"); // hash du pwd
+  ArduinoOTA.setPasswordHash(OTA_PWDHASH);
   
   ArduinoOTA.onStart([]() {
     String type;

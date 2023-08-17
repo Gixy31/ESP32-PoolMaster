@@ -16,23 +16,13 @@
 static uint8_t BitMap1 = 0;
 static uint8_t BitMap2 = 0;
 
-#ifdef DEVT
-static const char* PoolTopicMeas1 = "Home/Pool6/Meas1";
-static const char* PoolTopicMeas2 = "Home/Pool6/Meas2";
-static const char* PoolTopicSet1  = "Home/Pool6/Set1";
-static const char* PoolTopicSet2  = "Home/Pool6/Set2";
-static const char* PoolTopicSet3  = "Home/Pool6/Set3";
-static const char* PoolTopicSet4  = "Home/Pool6/Set4";
-static const char* PoolTopicSet5  = "Home/Pool6/Set5";
-#else
-static const char* PoolTopicMeas1 = "Home/Pool/Meas1";
-static const char* PoolTopicMeas2 = "Home/Pool/Meas2";
-static const char* PoolTopicSet1  = "Home/Pool/Set1";
-static const char* PoolTopicSet2  = "Home/Pool/Set2";
-static const char* PoolTopicSet3  = "Home/Pool/Set3";
-static const char* PoolTopicSet4  = "Home/Pool/Set4";
-static const char* PoolTopicSet5  = "Home/Pool/Set5";
-#endif
+static const char* PoolTopicMeas1 = POOLTOPIC"Meas1";
+static const char* PoolTopicMeas2 = POOLTOPIC"Meas2";
+static const char* PoolTopicSet1  = POOLTOPIC"Set1";
+static const char* PoolTopicSet2  = POOLTOPIC"Set2";
+static const char* PoolTopicSet3  = POOLTOPIC"Set3";
+static const char* PoolTopicSet4  = POOLTOPIC"Set4";
+static const char* PoolTopicSet5  = POOLTOPIC"Set5";
 
 int freeRam(void);
 void stack_mon(UBaseType_t&);

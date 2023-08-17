@@ -7,25 +7,20 @@
 #include "PoolMaster.h"
 
 AsyncMqttClient mqttClient;
-#ifdef MQTT_LOGIN
- static const char* MqttServerClientID = "ESP32Pool";  // /!\ choose a client ID which is unique to this Arduino board
- static const char* MqttServerLogin    = nullptr;      //replace by const char* MqttServerLogin = nullptr; in case broker does not require a login/pwd
- static const char* MqttServerPwd      = nullptr;      //replace by const char* MqttServerPwd = nullptr; in case broker does not require a login/pwd
-#endif
 
-bool MQTTConnection = false;           // Status of connection to broker
+bool MQTTConnection = false;                  // Status of connection to broker
 static TimerHandle_t mqttReconnectTimer;      // Reconnect timer for MQTT
 static TimerHandle_t wifiReconnectTimer;      // Reconnect timer for WiFi
 
-#ifdef DEVT
-static const char* PoolTopicAPI       = "Home/Pool6/API";
-static const char* PoolTopicStatus    = "Home/Pool6/status";
-static const char* PoolTopicError     = "Home/Pool6/Err";
-#else
-static const char* PoolTopicAPI       = "Home/Pool/API";
-static const char* PoolTopicStatus    = "Home/Pool/status";
-static const char* PoolTopicError     = "Home/Pool/Err";
+#ifdef MQTT_LOGIN
+ static const char* MqttServerClientID = MQTT_SERVER_ID;            
+ static const char* MqttServerLogin    = MQTT_SERVER_LOGIN;                
+ static const char* MqttServerPwd      = MQTT_SERVER_PWD;            
 #endif
+
+static const char* PoolTopicAPI       = POOLTOPIC"API";
+static const char* PoolTopicStatus    = POOLTOPIC"Status";
+static const char* PoolTopicError     = POOLTOPIC"Err";
 
 // Functions prototypes
 void initTimers(void);
@@ -56,12 +51,12 @@ void mqttInit() {
   mqttClient.onUnsubscribe(onMqttUnSubscribe);
   mqttClient.onMessage(onMqttMessage);
   mqttClient.onPublish(onMqttPublish);
-  mqttClient.setServer(MQTT_SERVER_IP,MQTT_SERVER_PORT);
   mqttClient.setWill(PoolTopicStatus,1,true,"{\"PoolMaster Online\":0}");
+  mqttClient.setServer(MQTT_SERVER_IP,MQTT_SERVER_PORT);
 #ifdef MQTT_LOGIN  
   mqttClient.setCredentials(MqttServerLogin,MqttServerPwd);
   mqttClient.setClientId(MqttServerClientID);
-#endif  
+#endif
 } 
 
 void mqttErrorPublish(const char* Payload){

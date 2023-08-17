@@ -7,6 +7,7 @@
 static WiFiClient wificlient;
 
 // Functions prototypes
+
 void readLocalTime(void);
 bool saveParam(const char*,uint8_t );
 bool saveParam(const char*,bool );
@@ -22,10 +23,8 @@ void Send_IFTTTNotif(void);
 
 void PoolMaster(void *pvParameters)
 {
-
-                                                                                                                                                                                                 bool DoneForTheDay = false;                     // Reset actions done once per day
+                                                                                                                            bool DoneForTheDay = false;                     // Reset actions done once per day
   bool d_calc = false;                            // Filtration duration computed
-  bool cleaning_done = false;                     // daily cleaning done   
 
   static UBaseType_t hwm=0;                       // free stack size
 
@@ -134,14 +133,14 @@ void PoolMaster(void *pvParameters)
         !PSIError && hour() >= storage.FiltrationStart && hour() < storage.FiltrationStop )
         FiltrationPump.Start();
 
-    //start cleaning robot for 2 hours 30mn after filtration start
+    //start cleaning robot for 2 hours, 30mn after filtration start
     if (FiltrationPump.IsRunning() && storage.AutoMode && !storage.WinterMode && !RobotPump.IsRunning() &&
-        ((millis() - FiltrationPump.LastStartTime) / 1000 / 60) >= 30 && !cleaning_done)
+        ((millis() - FiltrationPump.LastStartTime) / 1000 / 60) >= ROBOT_DELAY && !cleaning_done)
     {
         RobotPump.Start();
-        Debug.print(DBG_INFO,"Robot Start 30mn after Filtration");    
+        Debug.print(DBG_INFO,"Robot Start 30mn after Filtration");   
     }
-    if(RobotPump.IsRunning() && storage.AutoMode && ((millis() - RobotPump.LastStartTime) / 1000 / 60) >= 120)
+    if(RobotPump.IsRunning() && storage.AutoMode && ((millis() - RobotPump.LastStartTime) / 1000 / 60) >= ROBOT_DURATION)
     {
         RobotPump.Stop();
         cleaning_done = true;

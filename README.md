@@ -16,7 +16,10 @@ Compared to the initial project, the main differences are:
   The project isn't a fork of the original one due to the different structure of source files with PlatformIO ((.cpp, .h).
   A dedicated board has been designed to host all components. There are 8 LEDs at the bottom to display status, warnings and alarms.
   
-  This latest version (V6, aka ESP-2.0) implement direct usage of FreeRTOS functions for managing tasks and queues. There are 10 tasks sharing the
+  In version ESP-3.0, the display function has been very simplified (twice less code), using Nextion variables only to deport the logic 
+  into the Nextion and updating the display only when it is ON.
+  
+  The version V6, (aka ESP-2.0) implement direct usage of FreeRTOS functions for managing tasks and queues. There are 10 tasks sharing the
   app_CPU :
   - The Arduino loopTask, with only the setup() function. When the setup is finished, the task deletes itself to recover memory;
   - PoolMaster, running every 500ms, which mainly supervises the overall timing of the system;

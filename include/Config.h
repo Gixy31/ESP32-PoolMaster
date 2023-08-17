@@ -1,9 +1,16 @@
-// Firmware revision
-#define FIRMW "ESP-2.A"
+// Firmware revisions
+#define FIRMW "ESP-3.0"
+#define TFT_FIRMW "TFT-2.0"						   
 
+#define DEBUG_LEVEL DBG_INFO     // Possible levels : NONE/ERROR/WARNING/INFO/DEBUG/VERBOSE
+
+//Version of config stored in EEPROM
+//Random value. Change this value (to any other value) to revert the config to default values
+#define CONFIG_VERSION 50
 // WiFi credentials
 #define WIFI_NETWORK "YOUR_WIFI_NETWORK_ID"
 #define WIFI_PASSWORD "YOUR_WIFI_NETWORK_PWD"
+#define OTA_PWDHASH   "510179c0211489b9625a5f2e41da8469"
 
 //IFTTT key to trigger event
 #define IFTTT_key "/trigger/PoolMaster/with/key/Your_IFTTT_Key"
@@ -46,27 +53,34 @@
 //12bits (0,06°C) temperature sensors resolution
 #define TEMPERATURE_RESOLUTION 12
 
-//Version of config stored in EEPROM
-//Random value. Change this value (to any other value) to revert the config to default values
-#define CONFIG_VERSION 50
 
 //MQTT stuff including local broker/server IP address, login and pwd
 //------------------------------------------------------------------
 //interval (in miilisec) between MQTT publishes of measurement data
 #define PUBLISHINTERVAL 30000
 
-#define MQTT_SERVER_IP IPAddress(192, 168, 1, 51)
+#define MQTT_SERVER_IP IPAddress(000, 000, 000, 000)
 #define MQTT_SERVER_PORT 1883
 
-//#define MQTT_LOGIN                                              // uncomment if MQTT broker needs login/pwd
+//#define MQTT_LOGIN                           // uncomment if MQTT broker needs login/pwd
+//#define MQTT_SERVER_ID    "ESP32Pool"		   // MQTT server ID
+//#define MQTT_SERVER_LOGIN "Your_Login"
+//#define MQTT_SERVER_PWD   "Your_Pwd" 				
 
-#ifdef MQTT_LOGIN
-  static const char* MqttServerClientID = "ESP32Pool";            // /!\ choose a client ID which is unique to this Arduino board
-  static const char* MqttServerLogin    = nullptr;                //replace by const char* MqttServerLogin = nullptr; in case broker does not require a login/pwd
-  static const char* MqttServerPwd      = nullptr;                //replace by const char* MqttServerPwd = nullptr; in case broker does not require a login/pwd
-#endif  
+// Topic used in DEVT or OPER mode
+
+#ifdef DEVT
+  #define POOLTOPIC "Home/Pool6/"
+#else
+  #define POOLTOPIC "Home/Pool/"
+#endif 
+
+// Robot pump timing
+#define ROBOT_DELAY 60     // Robot start delay after filtration in mn
+#define ROBOT_DURATION 90  // Robot cleaning duration
 
 //Display timeout before blanking
+//-------------------------------
 #define TFT_SLEEP 60000L 
 
 // Loop tasks scheduling parameters
@@ -102,3 +116,9 @@
 #define DT7 100/portTICK_PERIOD_MS
 #define DT8 570/portTICK_PERIOD_MS
 #define DT9 940/portTICK_PERIOD_MS
+
+//#define CHRONO                    // Activate tasks timings traces for profiling
+//#define SIMU                      // Used to simulate pH/ORP sensors. Very simple simulation:
+                                    // the sensor value is computed from the output of the PID 
+                                    // loop to reach linearly the theorical value produced by this
+                                    // output after one hour

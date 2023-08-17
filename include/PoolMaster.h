@@ -1,11 +1,6 @@
 #pragma once
 #define ARDUINOJSON_USE_DOUBLE 1  // Required to force ArduinoJSON to treat float as double
 #define DEBUG_LEVEL DBG_INFO      // Possible levels : NONE/ERROR/WARNING/INFO/DEBUG/VERBOSE
-//#define CHRONO                    // Activate tasks timings traces for profiling
-//#define SIMU                      // Used to simulate pH/ORP sensors. Very simple simulation:
-                                    // the sensor value is computed from the output of the PID 
-                                    // loop to reach linearly the theorical value produced by this
-                                    // output after one hour
 
 #include "Arduino_DebugUtils.h"   // Debug.print
 #include <time.h>                 // Struct and function declarations for dealing with time

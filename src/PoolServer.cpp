@@ -373,24 +373,24 @@ void ProcessCommand(void *pvParameters)
         }
         else if (command.containsKey(F("RstpHCal")))//"RstpHCal" reset the calibration coefficients of the pH probe
         {
-          storage.pHCalibCoeffs0 = 4.3;
-          storage.pHCalibCoeffs1 = -2.63;
+          storage.pHCalibCoeffs0 = 3.51;
+          storage.pHCalibCoeffs1 = -2.73;
           saveParam("pHCalibCoeffs0",storage.pHCalibCoeffs0);
           saveParam("pHCalibCoeffs1",storage.pHCalibCoeffs1);
           PublishSettings();
         }
         else if (command.containsKey(F("RstOrpCal")))//"RstOrpCal" reset the calibration coefficients of the Orp probe
         {
-          storage.OrpCalibCoeffs0 = (double)-1189.;
-          storage.OrpCalibCoeffs1 = (double)2564.;
+          storage.OrpCalibCoeffs0 = (double)-930.;
+          storage.OrpCalibCoeffs1 = (double)2455.;
           saveParam("OrpCalibCoeffs0",storage.OrpCalibCoeffs0);
           saveParam("OrpCalibCoeffs1",storage.OrpCalibCoeffs1);
           PublishSettings();
         }
         else if (command.containsKey(F("RstPSICal")))//"RstPSICal" reset the calibration coefficients of the pressure sensor
         {
-          storage.PSICalibCoeffs0 = (double)1.11;
-          storage.PSICalibCoeffs1 = (double)0;
+          storage.PSICalibCoeffs0 = (double)1.31;
+          storage.PSICalibCoeffs1 = (double)-0.1;
           saveParam("PSICalibCoeffs0",storage.PSICalibCoeffs0);
           saveParam("PSICalibCoeffs1",storage.PSICalibCoeffs1);
           PublishSettings();
@@ -420,8 +420,10 @@ void ProcessCommand(void *pvParameters)
         {
           if ((int)command[F("RobotPump")] == 0){
             RobotPump.Stop();    //stop robot pump
+            cleaning_done = true;
           } else {
             RobotPump.Start();   //start robot pump
+            cleaning_done = false;
           }  
         }
         else if (command.containsKey(F("PhPump"))) //"PhPump" command which starts or stops the Acid pump

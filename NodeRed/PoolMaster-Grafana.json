@@ -3,7 +3,10 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": "-- Grafana --",
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -14,74 +17,175 @@
   },
   "description": "Paramètres piscine : pH, ORP, Température et pompes",
   "editable": true,
-  "gnetId": null,
+  "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": 1,
   "links": [],
+  "liveNow": false,
   "panels": [
     {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "InfluxDB",
-      "decimals": 2,
+      "datasource": {
+        "type": "influxdb",
+        "uid": "v6u0iLzRk"
+      },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "axisWidth": 50,
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "max": 9,
+          "min": 5,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Température"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "celsius"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 40
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "Temp"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Water Temp"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "celsius"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 40
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "Temp"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Air Temperature"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "celsius"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 40
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "Temp"
+              }
+            ]
+          }
+        ]
       },
-      "fill": 1,
-      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
         "y": 0
       },
-      "hiddenSeries": false,
       "id": 10,
-      "legend": {
-        "avg": false,
-        "current": true,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": true
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "7.2.2",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "Température",
-          "yaxis": 2
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
-        {
-          "alias": "Water Temp",
-          "yaxis": 2
-        },
-        {
-          "alias": "Air Temperature",
-          "yaxis": 2
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
         }
-      ],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
+      },
+      "pluginVersion": "10.0.2",
       "targets": [
         {
           "alias": "pH",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "v6u0iLzRk"
+          },
           "groupBy": [],
           "measurement": "PoolMaster",
           "orderByTime": "ASC",
@@ -104,6 +208,10 @@
         },
         {
           "alias": "ORP",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "v6u0iLzRk"
+          },
           "groupBy": [],
           "hide": false,
           "measurement": "PoolMaster",
@@ -133,6 +241,10 @@
         },
         {
           "alias": "Water Temp",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "v6u0iLzRk"
+          },
           "groupBy": [],
           "measurement": "PoolMaster",
           "orderByTime": "ASC",
@@ -153,6 +265,10 @@
         },
         {
           "alias": "Air Temperature",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "v6u0iLzRk"
+          },
           "groupBy": [],
           "measurement": "PoolMaster",
           "orderByTime": "ASC",
@@ -172,55 +288,16 @@
           "tags": []
         }
       ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
       "title": "pH / ORP / Water & Air Temp",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:175",
-          "decimals": null,
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": "9",
-          "min": "5",
-          "show": true
-        },
-        {
-          "$$hashKey": "object:176",
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
+      "type": "timeseries"
     },
     {
-      "datasource": "InfluxDB",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "v6u0iLzRk"
+      },
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "decimals": 2,
           "displayName": "pH",
           "mappings": [],
@@ -258,6 +335,7 @@
       },
       "id": 14,
       "options": {
+        "orientation": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -268,10 +346,14 @@
         "showThresholdLabels": true,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "7.2.2",
+      "pluginVersion": "10.0.2",
       "targets": [
         {
           "alias": "pH",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "v6u0iLzRk"
+          },
           "groupBy": [
             {
               "params": [
@@ -308,18 +390,17 @@
           "tags": []
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "",
       "type": "gauge"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "influxdb",
+        "uid": "v6u0iLzRk"
+      },
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "decimals": 0,
-          "displayName": "pH+ tank",
+          "displayName": "pH- tank",
           "mappings": [],
           "max": 100,
           "min": 0,
@@ -335,7 +416,8 @@
                 "value": 20
               }
             ]
-          }
+          },
+          "unit": "percent"
         },
         "overrides": []
       },
@@ -348,6 +430,8 @@
       "id": 17,
       "options": {
         "displayMode": "lcd",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
         "orientation": "vertical",
         "reduceOptions": {
           "calcs": [
@@ -356,12 +440,17 @@
           "fields": "",
           "values": false
         },
-        "showUnfilled": true
+        "showUnfilled": true,
+        "valueMode": "color"
       },
-      "pluginVersion": "7.2.2",
+      "pluginVersion": "10.0.2",
       "targets": [
         {
           "alias": "pH tank",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "v6u0iLzRk"
+          },
           "groupBy": [],
           "measurement": "PoolMaster",
           "orderByTime": "ASC",
@@ -381,65 +470,123 @@
           "tags": []
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "",
       "type": "bargauge"
     },
     {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": null,
+      "datasource": {
+        "type": "influxdb",
+        "uid": "v6u0iLzRk"
+      },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "axisWidth": 50,
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Water Pressure"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "pressurebar"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 2
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "Pressure"
+              }
+            ]
+          }
+        ]
       },
-      "fill": 1,
-      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
         "y": 8
       },
-      "hiddenSeries": false,
       "id": 12,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
       "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "7.2.2",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "Water Pressure",
-          "yaxis": 2
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
         }
-      ],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
+      },
+      "pluginVersion": "10.0.2",
       "targets": [
         {
           "alias": "Filtration",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "v6u0iLzRk"
+          },
           "groupBy": [],
           "measurement": "PoolMaster",
           "orderByTime": "ASC",
@@ -466,6 +613,10 @@
         },
         {
           "alias": "Robot",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "v6u0iLzRk"
+          },
           "groupBy": [],
           "measurement": "PoolMaster",
           "orderByTime": "ASC",
@@ -491,7 +642,11 @@
           "tags": []
         },
         {
-          "alias": "PH+",
+          "alias": "PH",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "v6u0iLzRk"
+          },
           "groupBy": [],
           "measurement": "PoolMaster",
           "orderByTime": "ASC",
@@ -518,6 +673,10 @@
         },
         {
           "alias": "CHL",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "v6u0iLzRk"
+          },
           "groupBy": [],
           "measurement": "PoolMaster",
           "orderByTime": "ASC",
@@ -544,6 +703,10 @@
         },
         {
           "alias": "Water Pressure",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "v6u0iLzRk"
+          },
           "groupBy": [],
           "measurement": "PoolMaster",
           "orderByTime": "ASC",
@@ -563,55 +726,16 @@
           "tags": []
         }
       ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
       "title": "Pumps & Water pressure",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:553",
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "$$hashKey": "object:554",
-          "decimals": 1,
-          "format": "pressurebar",
-          "label": "",
-          "logBase": 1,
-          "max": "2",
-          "min": "0",
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
+      "type": "timeseries"
     },
     {
-      "datasource": "InfluxDB",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "v6u0iLzRk"
+      },
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "decimals": 0,
           "displayName": "ORP (mV)",
           "mappings": [],
@@ -649,6 +773,7 @@
       },
       "id": 15,
       "options": {
+        "orientation": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -659,10 +784,14 @@
         "showThresholdLabels": true,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "7.2.2",
+      "pluginVersion": "10.0.2",
       "targets": [
         {
           "alias": "pH",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "v6u0iLzRk"
+          },
           "groupBy": [
             {
               "params": [
@@ -699,16 +828,15 @@
           "tags": []
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "",
       "type": "gauge"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "influxdb",
+        "uid": "v6u0iLzRk"
+      },
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "decimals": 0,
           "displayName": "Chl tank",
           "mappings": [],
@@ -726,7 +854,8 @@
                 "value": 20
               }
             ]
-          }
+          },
+          "unit": "percent"
         },
         "overrides": []
       },
@@ -739,6 +868,8 @@
       "id": 18,
       "options": {
         "displayMode": "lcd",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
         "orientation": "vertical",
         "reduceOptions": {
           "calcs": [
@@ -747,12 +878,17 @@
           "fields": "",
           "values": false
         },
-        "showUnfilled": true
+        "showUnfilled": true,
+        "valueMode": "color"
       },
-      "pluginVersion": "7.2.2",
+      "pluginVersion": "10.0.2",
       "targets": [
         {
           "alias": "Chl tank",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "v6u0iLzRk"
+          },
           "groupBy": [],
           "measurement": "PoolMaster",
           "orderByTime": "ASC",
@@ -772,26 +908,24 @@
           "tags": []
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "",
       "type": "bargauge"
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 26,
+  "schemaVersion": 38,
   "style": "dark",
   "tags": [],
   "templating": {
     "list": []
   },
   "time": {
-    "from": "now-2d",
+    "from": "now-7d",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "PoolMaster",
   "uid": "4rykOYzgz",
-  "version": 30
+  "version": 36,
+  "weekStart": ""
 }

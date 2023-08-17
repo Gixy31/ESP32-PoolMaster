@@ -244,7 +244,7 @@ void pHRegulation(void *pvParameters)
     #endif 
 
     //do not compute PID if filtration pump is not running
-    // Set also a lower limit at 30s (a lower pump duration does'nt mean anything)
+    // Set also a lower limit at 30s (a lower pump duration doesn't mean anything)
 
     if (FiltrationPump.IsRunning()  && (PhPID.GetMode() == AUTOMATIC))
     {  
@@ -262,7 +262,7 @@ void pHRegulation(void *pvParameters)
       /************************************************
        turn the Acid pump on/off based on pid output
       ************************************************/
-	  unsigned long now = millis();
+	    unsigned long now = millis();
       if (now - storage.PhPIDwindowStartTime > storage.PhPIDWindowSize)
       {
         //time to shift the Relay Window
@@ -330,7 +330,7 @@ void OrpRegulation(void *pvParameters)
       /************************************************
        turn the Chl pump on/off based on pid output
       ************************************************/
-	  unsigned long now = millis();
+	    unsigned long now = millis();
       if (now - storage.OrpPIDwindowStartTime > storage.OrpPIDWindowSize)
       {
         //time to shift the Relay Window
