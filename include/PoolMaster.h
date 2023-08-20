@@ -1,6 +1,5 @@
 #pragma once
 #define ARDUINOJSON_USE_DOUBLE 1  // Required to force ArduinoJSON to treat float as double
-#define DEBUG_LEVEL DBG_INFO      // Possible levels : NONE/ERROR/WARNING/INFO/DEBUG/VERBOSE
 
 #include "Arduino_DebugUtils.h"   // Debug.print
 #include <time.h>                 // Struct and function declarations for dealing with time
@@ -65,8 +64,9 @@ extern String Firmw;
 extern AsyncMqttClient mqttClient;                     // MQTT async. client
 
 // Various flags
-extern volatile bool startTasks;                                // flag to start loop tasks       
+extern volatile bool startTasks;                       // flag to start loop tasks       
 extern bool MQTTConnection;                            // MQTT connected flag
 extern bool EmergencyStopFiltPump;                     // Filtering pump stopped manually; needs to be cleared to restart
 extern bool AntiFreezeFiltering;                       // Filtration anti freeze mode
-extern bool PSIError;                                  // Water pressure alarm
+extern bool PSIError;								   // Water pressure alarm
+extern bool cleaning_done;      					   // Robot clean-up done                        
