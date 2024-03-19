@@ -82,8 +82,8 @@ void AnalogPoll(void *pvParameters)
     adc_ext.update();
 
     if(adc_ext.ready()){                              // all conversions done ?
-        orp_sensor_value = adc_int.readFilter(0) ;    // ORP sensor current value
-        ph_sensor_value  = adc_int.readFilter(1) ;    // pH sensor current value
+        orp_sensor_value = adc_ext.readFilter(0) ;    // ORP sensor current value
+        ph_sensor_value  = adc_ext.readFilter(1) ;    // pH sensor current value
         adc_ext.start();  
         
         //Ph
