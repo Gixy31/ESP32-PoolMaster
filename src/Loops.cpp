@@ -14,7 +14,7 @@ static DeviceAddress DS18B20_A = { 0x28, 0xB0, 0x70, 0x75, 0xD0, 0x01, 0x3C, 0x9
 
 // Setup an ADS1115 instance for analog measurements
 static ADS1115Scanner adc_int(ADS1115ADDRESS);  // Address 0x48 is the default
-#if pH_Orp_ACQ == EXT_ADS1115
+#ifdef EXT_ADS1115
 static ADS1115Scanner adc_ext(EXT_ADS1115_ADDR);
 #endif
 
@@ -48,7 +48,7 @@ void unlockI2C();
 //We have here two sections of code here of which only one will be compiled depending on the
 //configuration defined by pH_Orp_ACQ. 
 
-#if pH_Orp_ACQ == EXT_ADS1115
+#ifdef EXT_ADS1115
 //----------------------------
 void AnalogInit()
 {
@@ -115,7 +115,7 @@ void AnalogPoll(void *pvParameters)
   }  
 }
 
-#else //pH_Orp_ACQ
+#else //EXT_ADS1115
 //-----------------
 
 void AnalogInit()
