@@ -8,12 +8,12 @@
 //Random value. Change this value (to any other value) to revert the config to default values
 #define CONFIG_VERSION 50
 // WiFi credentials
-#define WIFI_NETWORK "YOUR_WIFI_NETWORK_ID"
-#define WIFI_PASSWORD "YOUR_WIFI_NETWORK_PWD"
-#define OTA_PWDHASH   "Your_OTA_password_hash"
+#define WIFI_NETWORK "CasaParigi"
+#define WIFI_PASSWORD "Elsa2011Andrea2017Clara2019"
+#define OTA_PWDHASH   "dsfjdkf787342Hjkhfed783243"
 
 //IFTTT key to trigger event
-#define IFTTT_key "/trigger/PoolMaster/with/key/Your_IFTTT_Key"
+#define IFTTT_key "/Home/Pool/TriggerKey"
 
 // PID Directions (either DIRECT or REVERSE depending on Ph/Orp correction vs water properties)
 #define PhPID_DIRECTION REVERSE
@@ -81,7 +81,7 @@
 
 //Display timeout before blanking
 //-------------------------------
-#define TFT_SLEEP 60000L 
+#define TFT_SLEEP 600000L 
 
 // Loop tasks scheduling parameters
 //---------------------------------
