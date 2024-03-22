@@ -12,6 +12,11 @@
 #define WIFI_NETWORK "YOUR_WIFI_NETWORK_ID"
 #define WIFI_PASSWORD "YOUR_WIFI_NETWORK_PWD"
 #define OTA_PWDHASH   "Your_OTA_password_hash"
+#ifdef DEVT
+  #define HOSTNAME "PoolMaster_Dev"
+#else
+  #define HOSTNAME "PoolMaster"
+#endif 
 
 //IFTTT key to trigger event
 #define IFTTT_key "/trigger/PoolMaster/with/key/Your_IFTTT_Key"
@@ -64,13 +69,14 @@
 //MQTT stuff including local broker/server IP address, login and pwd
 //------------------------------------------------------------------
 
-//interval (in miilisec) between MQTT publishes of measurement data
+//interval (in millisec) between MQTT publishement of measurement data
 #define PUBLISHINTERVAL 30000
 
 #define MQTT_SERVER_IP IPAddress(000, 000, 000, 000)
 #define MQTT_SERVER_PORT 1883
 
-//#define MQTT_LOGIN                           // uncomment if MQTT broker needs login/pwd
+// Uncomment if MQTT broker needs login/pwd
+//#define MQTT_LOGIN 				
 //#define MQTT_SERVER_ID    "ESP32Pool"		   // MQTT server ID
 //#define MQTT_SERVER_LOGIN "Your_Login"
 //#define MQTT_SERVER_PWD   "Your_Pwd" 				

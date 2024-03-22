@@ -27,6 +27,7 @@ void initTimers(void);
 void mqttInit(void);
 void mqttErrorPublish(const char* );
 void connectToWiFi(void);
+void reconnectToWiFi();
 void connectToMqtt(void);
 void WiFiEvent(WiFiEvent_t );
 void onMqttConnect(bool);
@@ -40,7 +41,7 @@ int  freeRam(void);
 
 void initTimers() {
   mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
-  wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWiFi));
+  wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(reconnectToWiFi));
 }
 
 void mqttInit() {
@@ -74,8 +75,19 @@ void connectToWiFi(){
   Debug.print(DBG_INFO,"[WiFi] Connecting to WiFi...");
   WiFi.mode(WIFI_STA);
   WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
-  WiFi.setHostname("PoolMaster"); 
+  WiFi.setHostname(HOSTNAME); 
   WiFi.begin(WIFI_NETWORK, WIFI_PASSWORD);
+}
+
+void reconnectToWiFi(){
+  if(!WL_CONNECTED){
+    Debug.print(DBG_INFO,"[WiFi] Reconnecting to WiFi...");
+    WiFi.reconnect();
+    while(WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(":");
+    }
+  } else Debug.print(DBG_INFO,"[WiFi] Spurious disconnect event ignored");    
 }
 
 void connectToMqtt(){
