@@ -46,7 +46,7 @@ void unlockI2C();
 // 4sps each. Filtering and average is then performed as usual to get a new value every second.
 
 //We have here two sections of code here of which only one will be compiled depending on the
-//configuration defined by pH_Orp_ACQ. 
+//configuration 
 
 #ifdef EXT_ADS1115
 //----------------------------
@@ -82,20 +82,24 @@ void AnalogPoll(void *pvParameters)
     adc_ext.update();
 
     if(adc_ext.ready()){                              // all conversions done ?
-        orp_sensor_value = adc_ext.readFilter(0) ;    // ORP sensor current value
-        ph_sensor_value  = adc_ext.readFilter(1) ;    // pH sensor current value
-        adc_ext.start();  
+      // As an int is 32 bits long for ESP32 and as the ADS1115 is wired in differential, we have to manage
+      // negative voltage as follow
+      orp_sensor_value = adc_ext.readFilter(0);
+      if(orp_sensor_value >= 32768) orp_sensor_value = orp_sensor_value - 65536;  // ORP sensor current value
+      ph_sensor_value = adc_ext.readFilter(1);
+      if(ph_sensor_value >= 32768) ph_sensor_value= ph_sensor_value - 65536;      // pH sensor current value
+      adc_ext.start();  
         
-        //Ph
-        samples_Ph.add(ph_sensor_value);          // compute average of pH from center 5 measurements among 11
-        storage.PhValue = (samples_Ph.getAverage(5)*0.1875/1000.)*storage.pHCalibCoeffs0 + storage.pHCalibCoeffs1;
+      //Ph
+      samples_Ph.add(ph_sensor_value);          // compute average of pH from center 5 measurements among 11
+      storage.PhValue = (samples_Ph.getAverage(5)*0.1875/1000.)*storage.pHCalibCoeffs0 + storage.pHCalibCoeffs1;
 
-        //ORP
-        samples_Orp.add(orp_sensor_value);        // compute average of ORP from last 5 measurements
-        storage.OrpValue = (samples_Orp.getAverage(5)*0.1875/1000.)*storage.OrpCalibCoeffs0 + storage.OrpCalibCoeffs1;
+      //ORP
+      samples_Orp.add(orp_sensor_value);        // compute average of ORP from last 5 measurements
+      storage.OrpValue = (samples_Orp.getAverage(5)*0.1875/1000.)*storage.OrpCalibCoeffs0 + storage.OrpCalibCoeffs1;
 
-        Debug.print(DBG_DEBUG,"pH: %5.0f - %4.2f - ORP: %5.0f - %3.0fmV - PSI: %5.0f - %4.2fBar\r",
-            ph_sensor_value,storage.PhValue,orp_sensor_value,storage.OrpValue,psi_sensor_value,storage.PSIValue);
+      Debug.print(DBG_DEBUG,"pH: %5.0f - %4.2f - ORP: %5.0f - %3.0fmV - PSI: %5.0f - %4.2fBar\r",
+        ph_sensor_value,storage.PhValue,orp_sensor_value,storage.OrpValue,psi_sensor_value,storage.PSIValue);
     }
     
     adc_int.update();
@@ -233,8 +237,8 @@ void AnalogPoll(void *pvParameters)
   }  
 }
 
-#endif //pH_Orp_ACQ
-//-----------------
+#endif //EXT_ADS1115
+//------------------
 
 void StatusLights(void *pvParameters)
 {
