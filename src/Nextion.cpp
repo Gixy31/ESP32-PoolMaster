@@ -151,7 +151,12 @@ void UpdateTFT()
       if(TFT_Winter != storage.WinterMode) 
       { myNex.writeNum(F("page1.vaR2.val"),storage.WinterMode);
       TFT_Winter = storage.WinterMode;}  
-    }        
+    } 
+
+    if(CurrentPage == 2) {
+      myNex.writeStr(F("page0.vapH.txt"), String(storage.PhValue, 2));
+      myNex.writeStr(F("page0.vaOrp.txt"), String(storage.OrpValue, 0));
+    }       
 
     if(CurrentPage == 3) 
     {  UpdateWiFi(WiFi.status() == WL_CONNECTED);
@@ -160,7 +165,7 @@ void UpdateTFT()
     }  
 
     //put TFT in sleep mode with wake up on touch and force page 0 load to trigger an event
-    if((unsigned long)(millis() - LastAction) >= TFT_SLEEP && TFT_ON && CurrentPage != 2)
+    if((unsigned long)(millis() - LastAction) >= TFT_SLEEP && TFT_ON && CurrentPage !=2)
     {
       myNex.writeStr("thup=1");
       myNex.writeStr("wup=0");
