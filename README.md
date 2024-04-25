@@ -15,15 +15,15 @@ Compared to the initial project, the main differences are:
 </ul>  <br />
   The project isn't a fork of the original one due to the different structure of source files with PlatformIO ((.cpp, .h).
   A dedicated board has been designed to host all components. There are 8 LEDs at the bottom to display status, warnings and alarms.
-  
+   
   <br />
   In version ESP-3.0, the display function has been very simplified (twice less code), using Nextion variables only to deport the logic 
   into the Nextion and updating the display only when it is ON.
-  
+   
   <br />
   A new version of the board allows the connection of the pH_Orp board from Loïc (https://github.com/Loic74650/pH_Orp_Board/tree/main)  on an additional I2C connector. The sofware is modified accordingly. The configuration is defined in the config.h file. CAD_files 2 Gerber 3 files are provided.
   <br />
-  
+   
   The version V6, (aka ESP-2.0) implement direct usage of FreeRTOS functions for managing tasks and queues. There are 10 tasks sharing the
   app_CPU :
   - The Arduino loopTask, with only the setup() function. When the setup is finished, the task deletes itself to recover memory;
