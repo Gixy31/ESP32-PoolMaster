@@ -80,7 +80,7 @@ void connectToWiFi(){
 }
 
 void reconnectToWiFi(){
-  if(!WL_CONNECTED){
+  if(WiFi.status() != WL_CONNECTED){
     Debug.print(DBG_INFO,"[WiFi] Reconnecting to WiFi...");
     WiFi.reconnect();
     while(WiFi.status() != WL_CONNECTED) {
