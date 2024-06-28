@@ -83,10 +83,6 @@ void reconnectToWiFi(){
   if(WiFi.status() != WL_CONNECTED){
     Debug.print(DBG_INFO,"[WiFi] Reconnecting to WiFi...");
     WiFi.reconnect();
-    while(WiFi.status() != WL_CONNECTED) {
-      delay(500);
-      Serial.print(":");
-    }
   } else Debug.print(DBG_INFO,"[WiFi] Spurious disconnect event ignored");    
 }
 
@@ -96,15 +92,19 @@ void connectToMqtt(){
 
 void WiFiEvent(WiFiEvent_t event){
   switch(event){
-    case SYSTEM_EVENT_STA_GOT_IP:
+    case ARDUINO_EVENT_WIFI_STA_CONNECTED:
+      xTimerStop(wifiReconnectTimer,0);
       Debug.print(DBG_INFO,"[WiFi] Connected to: %s",WiFi.SSID().c_str());
+      break;
+    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+      xTimerStop(wifiReconnectTimer,0);
       Debug.print(DBG_INFO,"[WiFi] IP address: %s",WiFi.localIP().toString().c_str());
       Debug.print(DBG_INFO,"[WiFi] Hostname: %s",WiFi.getHostname());
       Debug.print(DBG_INFO,"[WiFi] Connecting to MQTT...");
       UpdateWiFi(true);
       connectToMqtt();
       break;
-    case SYSTEM_EVENT_STA_DISCONNECTED:
+    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
       Debug.print(DBG_WARNING,"[WiFi] Connection lost");
       xTimerStop(mqttReconnectTimer,0);
       xTimerStart(wifiReconnectTimer,0);
