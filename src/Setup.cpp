@@ -28,6 +28,7 @@ String Firmw = FIRMW;
 //Settings structure and its default values
 // si pH+ : Kp=2250000.
 // si pH- : Kp=2700000.
+#ifdef EXT_ADS1115
 StoreStruct storage =
 { 
   CONFIG_VERSION,
@@ -35,10 +36,23 @@ StoreStruct storage =
   13, 8, 21, 8, 22, 20,
   2700, 2700, 30000,
   1800000, 1800000, 0, 0,
-  7.3, 720.0, 1.8, 0.7, 10.0, 18.0, 3.0, 3.51449558, -2.73006544, -929.75615, 2454.70009, 1.31, -0.1,
+  7.3, 720.0, 1.8, 0.7, 10.0, 18.0, 3.0, -2.2183, 7.0, 431.03, 0.0, 1.31, -0.1,
   2700000.0, 0.0, 0.0, 18000.0, 0.0, 0.0, 0.0, 0.0, 28.0, 7.3, 720., 1.3,
   25.0, 60.0, 20.0, 20.0, 1.5, 1.5
 };
+#else
+StoreStruct storage =
+{ 
+  CONFIG_VERSION,
+  0, 0, 1, 0,
+  13, 8, 21, 8, 22, 20,
+  2700, 2700, 30000,
+  1800000, 1800000, 0, 0,
+  7.3, 720.0, 1.8, 0.7, 10.0, 18.0, 3.0, 3.61078313, -3.88020422, -966.946396, 2526.88809, 1.31, -0.1,
+  2700000.0, 0.0, 0.0, 18000.0, 0.0, 0.0, 0.0, 0.0, 28.0, 7.3, 720., 1.3,
+  25.0, 60.0, 20.0, 20.0, 1.5, 1.5
+};
+#endif
 
 tm timeinfo;
 
@@ -124,6 +138,8 @@ void setup()
   // Set appropriate debug level. The level is defined in PoolMaster.h
   Debug.setDebugLevel(DEBUG_LEVEL);
   Debug.timestampOn();
+  Debug.debugLabelOn();
+  Debug.formatTimestampOn();
 
   //get board info
   info();
@@ -310,7 +326,7 @@ void setup()
   xTaskCreatePinnedToCore(
     PoolMaster,
     "PoolMaster",
-    3072,
+    5120,
     NULL,
     1,
     nullptr,

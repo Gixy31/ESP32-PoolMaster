@@ -87,6 +87,7 @@ void reconnectToWiFi(){
 }
 
 void connectToMqtt(){
+  Debug.print(DBG_INFO,"[WiFi] Connecting to MQTT...");
   mqttClient.connect();
 }
 
@@ -100,9 +101,8 @@ void WiFiEvent(WiFiEvent_t event){
       xTimerStop(wifiReconnectTimer,0);
       Debug.print(DBG_INFO,"[WiFi] IP address: %s",WiFi.localIP().toString().c_str());
       Debug.print(DBG_INFO,"[WiFi] Hostname: %s",WiFi.getHostname());
-      Debug.print(DBG_INFO,"[WiFi] Connecting to MQTT...");
       UpdateWiFi(true);
-      connectToMqtt();
+      xTimerStart(mqttReconnectTimer,0);
       break;
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
       Debug.print(DBG_WARNING,"[WiFi] Connection lost");

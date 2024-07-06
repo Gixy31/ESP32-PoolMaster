@@ -3,8 +3,11 @@
 #include <Arduino.h>                // Arduino framework
 #include "Config.h"
 #include "PoolMaster.h"
+#include <ESP_Mail_Client.h>
 
-static WiFiClient wificlient;
+SMTPSession smtp;
+Session_Config config;
+SMTP_Message message;
 
 // Functions prototypes
 
@@ -19,14 +22,36 @@ void mqttErrorPublish(const char*);
 void PublishSettings(void);
 void UpdateTFT(void);
 void stack_mon(UBaseType_t&);
-void Send_IFTTTNotif(void);
+void smtpCallback(SMTP_Status);
+bool SMTP_Connect(void);
+void Send_Email(void);
 
 void PoolMaster(void *pvParameters)
 {
-                                                                                                                            bool DoneForTheDay = false;                     // Reset actions done once per day
+  bool DoneForTheDay = false;                     // Reset actions done once per day
   bool d_calc = false;                            // Filtration duration computed
 
   static UBaseType_t hwm=0;                       // free stack size
+
+  MailClient.networkReconnect(true);
+  #ifndef SILENT_MODE
+    smtp.debug(1);
+  #endif
+  smtp.callback(smtpCallback);
+  config.server.host_name = SMTP_HOST;
+  config.server.port = SMTP_PORT;
+  config.login.email = AUTHOR_LOGIN;
+  config.login.password = AUTHOR_PASSWORD;
+  config.login.user_domain = "127.0.0.1";
+
+  message.sender.name = F("PoolMaster");
+  message.sender.email = AUTHOR_EMAIL;
+  message.subject = F("PoolMaster Event");
+  message.addRecipient(F("Home"), RECIPIENT_EMAIL);
+  message.text.charSet = "us-ascii";
+  message.text.transfer_encoding = Content_Transfer_Encoding::enc_7bit;
+  message.priority = esp_mail_smtp_priority_low;
+  message.response.notify = esp_mail_smtp_notify_success | esp_mail_smtp_notify_failure | esp_mail_smtp_notify_delay;
 
   while(!startTasks);
   vTaskDelay(DT3);                                // Scheduling offset 
@@ -201,8 +226,8 @@ void PoolMaster(void *pvParameters)
     //UPdate Nextion TFT
     UpdateTFT();
 
-    //Send IFTTT notifications if alarms occured
-    Send_IFTTTNotif();
+    //Send email if alarm(s) occured
+    Send_Email();
 
     #ifdef CHRONO
     t_act = millis() - td;
@@ -218,7 +243,7 @@ void PoolMaster(void *pvParameters)
   }
 }
 
-//Enable/Disable Chl PID
+//Enable/Disable pH PID
 void SetPhPID(bool Enable)
 {
   if (Enable)
@@ -263,83 +288,125 @@ void SetOrpPID(bool Enable)
   }
 }
 
-//Send notifications to IFTTT applet in case of alarm
-void Send_IFTTTNotif(){
-    static const String url1 = IFTTT_key;
-    String url2 = "";
+bool SMTP_Connect(){
+  Debug.print(DBG_DEBUG,"SMTP Connection starts");
+  if (!smtp.connect(&config)){
+    Debug.print(DBG_ERROR,"SMTP Connection error, Status Code: %d, Error Code: %d, Reason: %s", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
+    return false;
+  } else Debug.print(DBG_INFO,"SMTP Connected");
+  if (!smtp.isLoggedIn()) Debug.print(DBG_ERROR,"Not yet logged in.");
+  else{
+    if (smtp.isAuthenticated()) Debug.print(DBG_INFO,"SMTP Successfully logged in.");
+    else Debug.print(DBG_ERROR,"SMTP Connected with no Auth.");
+  }
+  return true;
+}
+
+void Send_Email(){
+
+    char texte[80];
     static bool notif_sent[5] = {0,0,0,0,0};
 
     if(PSIError)
     {
-        if(!notif_sent[0])
-        {
-            if(wificlient.connect("maker.ifttt.com",80))
-            {
-                url2 = String("?value1=Water%20pressure&value2=");
-                if(storage.PSIValue <= storage.PSI_MedThreshold)
-                {
-                    url2 += String("Low");
-                } 
-                else if (storage.PSIValue >= storage.PSI_HighThreshold)
-                {
-                    url2 += String("High");
-                }
-                url2 += String("%20pressure:%20") + String(storage.PSIValue) + String("bar");
-                wificlient.print(String("POST ") + url1 + url2 + String(" HTTP/1.1\r\nHost: maker.ifttt.com\r\nConnection: close\r\n\r\n"));
-                notif_sent[0] = true;
-            }
-        }    
+      if(!notif_sent[0])
+      {
+        sprintf(texte,"Water pressure alert: %4.2fbar",storage.PSIValue);
+        message.text.content = texte;
+        if(SMTP_Connect()){   
+          if(!MailClient.sendMail(&smtp, &message))
+            Debug.print(DBG_ERROR,"Error, Status Code: %d, Error Code: %d, Reason: %s", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());     
+          else notif_sent[0] = true;
+        }
+      }    
     } else notif_sent[0] = false;
 
     if(!ChlPump.TankLevel())
     {
-        if(!notif_sent[1])
-        {
-            if(wificlient.connect("maker.ifttt.com",80))
-            {
-                url2 = String("?value1=Chl%20level&value2=") + String(ChlPump.GetTankFill()) + String("%");
-                wificlient.print(String("POST ") + url1 + url2 + String(" HTTP/1.1\r\nHost: maker.ifttt.com\r\nConnection: close\r\n\r\n"));
-                notif_sent[1] = true;
-            }
-        }
+      if(!notif_sent[1])
+      {
+        sprintf(texte,"Chlorine level LOW: %3.0f %",ChlPump.GetTankFill());
+        message.text.content = texte;
+        if(SMTP_Connect()){
+          if(!MailClient.sendMail(&smtp, &message))
+            Debug.print(DBG_ERROR,"Error, Status Code: %d, Error Code: %d, Reason: %s", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());    
+          else notif_sent[1] = true;
+        }  
+      }
     } else notif_sent[1] = false;
 
     if(!PhPump.TankLevel())
     {
-        if(!notif_sent[2])
-        {
-            if(wificlient.connect("maker.ifttt.com",80))
-            {
-                url2 = String("?value1=pH+%20level&value2=") + String(PhPump.GetTankFill()) + String("%");
-                wificlient.print(String("POST ") + url1 + url2 + String(" HTTP/1.1\r\nHost: maker.ifttt.com\r\nConnection: close\r\n\r\n"));
-                notif_sent[2] = true;
-            }
-        }
+      if(!notif_sent[2])
+      {
+        sprintf(texte,"Acid level LOW: %3.0f %",PhPump.GetTankFill());
+        message.text.content = texte;
+        if(SMTP_Connect()){ 
+          if(!MailClient.sendMail(&smtp, &message))
+            Debug.print(DBG_ERROR,"Error, Status Code: %d, Error Code: %d, Reason: %s", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());    
+          else notif_sent[2] = true;
+        }  
+      }
+
     } else notif_sent[2] = false;
 
     if(ChlPump.UpTimeError)
     {
-        if(!notif_sent[3])
-        {
-            if(wificlient.connect("maker.ifttt.com",80))
-            {
-                url2 = String("?value1=Chl%20pump%20uptime&value2=") + String(round(ChlPump.UpTime/60000.)) + String("min");
-                wificlient.print(String("POST ") + url1 + url2 + String(" HTTP/1.1\r\nHost: maker.ifttt.com\r\nConnection: close\r\n\r\n"));
-                notif_sent[3] = true;
-            }
-        }
+      if(!notif_sent[3])
+      {
+        sprintf(texte,"Chlorine pump uptime: %2.0fmn",round(ChlPump.UpTime/60000.));
+        message.text.content = texte; 
+        if(SMTP_Connect()){       
+          if(!MailClient.sendMail(&smtp, &message))
+            Debug.print(DBG_ERROR,"Error, Status Code: %d, Error Code: %d, Reason: %s", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());    
+          else notif_sent[3] = true;
+        }  
+      }
     } else notif_sent[3] = false;
 
     if(PhPump.UpTimeError)
     {
-        if(!notif_sent[4])
-        {
-            if(wificlient.connect("maker.ifttt.com",80))
-            {
-                url2 = String("?value1=pH+%20pump%20uptime&value2=") + String(round(PhPump.UpTime/60000.)) + String("min");
-                wificlient.print(String("POST ") + url1 + url2 + String(" HTTP/1.1\r\nHost: maker.ifttt.com\r\nConnection: close\r\n\r\n"));
-                notif_sent[4] = true;
-            }
-        }
-    } else notif_sent[4] = false;     
+      if(!notif_sent[4])
+      {
+        sprintf(texte,"Acid pump uptime: %2.0fmn",round(PhPump.UpTime/60000.));
+        message.text.content = texte;
+        if(SMTP_Connect()){
+          if(!MailClient.sendMail(&smtp, &message))
+            Debug.print(DBG_ERROR,"Error, Status Code: %d, Error Code: %d, Reason: %s", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());    
+          else notif_sent[4] = true;
+        }  
+      }
+    } else notif_sent[4] = false; 
+}
+
+/* Callback function to get the Email sending status */
+void smtpCallback(SMTP_Status status){
+  /* Print the current status */
+  Debug.print(DBG_INFO,"Email send status: %d",status.info());
+
+  /* Print the sending result */
+  if (status.success()){
+    Debug.print(DBG_INFO,"Message sent success: %d", status.completedCount());
+    Debug.print(DBG_INFO,"Message sent failed: %d", status.failedCount());
+
+    for (size_t i = 0; i < smtp.sendingResult.size(); i++)
+    {
+      /* Get the result item */
+      SMTP_Result result = smtp.sendingResult.getItem(i);
+
+      // In case, ESP32, ESP8266 and SAMD device, the timestamp get from result.timestamp should be valid if
+      // your device time was synched with NTP server.
+      // Other devices may show invalid timestamp as the device time was not set i.e. it will show Jan 1, 1970.
+      // You can call smtp.setSystemTime(xxx) to set device time manually. Where xxx is timestamp (seconds since Jan 1, 1970)
+      
+      Debug.print(DBG_INFO,"Message No: %d", i + 1);
+      Debug.print(DBG_INFO,"Status: %s", result.completed ? "success" : "failed");
+      Debug.print(DBG_INFO,"Date/Time: %s", MailClient.Time.getDateTimeString(result.timestamp, "%B %d, %Y %H:%M:%S").c_str());
+      Debug.print(DBG_INFO,"Recipient: %s", result.recipients.c_str());
+      Debug.print(DBG_INFO,"Subject: %s", result.subject.c_str());
+    }
+
+    // Clear sending result as the memory usage will grow up.
+    smtp.sendingResult.clear();
+  }
 }

@@ -1,5 +1,5 @@
 // Firmware revisions
-#define FIRMW "ESP-3.2a"
+#define FIRMW "ESP-3.3"
 #define TFT_FIRMW "TFT-2.0"						   
 
 #define DEBUG_LEVEL DBG_INFO     // Possible levels : NONE/ERROR/WARNING/INFO/DEBUG/VERBOSE
@@ -18,8 +18,13 @@
   #define HOSTNAME "PoolMaster"
 #endif 
 
-//IFTTT key to trigger event
-#define IFTTT_key "/trigger/PoolMaster/with/key/Your_IFTTT_Key"
+// Mail parameters and credentials
+#define SMTP_HOST "your smtp server"
+#define SMTP_PORT 587  // check the port number
+#define AUTHOR_EMAIL "your email address"
+#define AUTHOR_LOGIN "your user name"
+#define AUTHOR_PASSWORD "your password"
+#define RECIPIENT_EMAIL "your recipient email address"
 
 // PID Directions (either DIRECT or REVERSE depending on Ph/Orp correction vs water properties)
 #define PhPID_DIRECTION REVERSE
