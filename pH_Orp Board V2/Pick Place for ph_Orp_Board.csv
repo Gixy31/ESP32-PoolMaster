@@ -1,0 +1,43 @@
+﻿Designator;Comment;Layer;Footprint;Center-X(mm);Center-Y(mm);Rotation;Description
+U4;ADM3260;TopLayer;SOP65P780X200-20N;72.1360mm;49.4030mm;180;I²C Digital Isolator 2500Vrms 2 Channel - 25kV/µs CMTI 20-SSOP (0.209, 5.30mm Width)
+U3;ADS1115IDGSR;TopLayer;SOP50P490X110-10N;53.2130mm;48.2600mm;270; Ultra-Small, Low-Power, I 2 C-Compatible, 860-SPS, 16-Bit ADC
+U2;LMP7721MA/NOPB;TopLayer;SOIC127P599X175-8N;45.9740mm;31.4960mm;0;3 Femtoampere Input Bias Current Precision Amplifier 8-SOIC -40 to 125
+U1;LMP7721MA/NOPB;TopLayer;SOIC127P599X175-8N;45.9740mm;61.4680mm;0;3 Femtoampere Input Bias Current Precision Amplifier 8-SOIC -40 to 125
+R24;10k;BottomLayer;0805R-10K;81.2800mm;51.8160mm;90;Resistor
+R23;10k;BottomLayer;0805R-10K;78.9940mm;51.8160mm;90;Resistor
+R22;10k;TopLayer;0805R-10K;65.6590mm;58.0390mm;180;Resistor
+R21;30.9k;TopLayer;0805R-33K;61.0870mm;58.0390mm;180;Resistor
+R20;10k;TopLayer;0805R-10K;61.8490mm;43.9420mm;90;Resistor
+R19;10k;TopLayer;0805R-10K;64.0080mm;43.9420mm;90;Resistor
+R14;100;BottomLayer;0805R-100;43.3070mm;47.3710mm;0;Resistor
+R13;100;BottomLayer;0805R-100;43.3070mm;42.7990mm;180;Resistor
+R12;100;BottomLayer;0805R-100;43.3070mm;49.6570mm;0;Resistor
+R11;100;BottomLayer;0805R-100;43.3070mm;53.9750mm;180;Resistor
+R10;10k;TopLayer;0805R-10K;48.8950mm;38.1000mm;180;Resistor
+R9;10k;TopLayer;0805R-10K;43.6880mm;67.1830mm;0;Resistor
+R8;10k;TopLayer;0805R-10K;43.9420mm;37.9730mm;180;Resistor
+R7;10k;TopLayer;0805R-10K;48.5140mm;67.1830mm;0;Resistor
+R6;1M;BottomLayer;0805R-1M;52.7050mm;37.4650mm;270;Resistor
+R5;200k;BottomLayer;0805R-220K;52.9590mm;58.0390mm;90;Resistor
+R4;51k;BottomLayer;0805R-56K;48.5140mm;38.2270mm;0;Resistor
+R3;51k;BottomLayer;0805R-56K;48.2600mm;59.0550mm;0;Resistor
+R2;100k;BottomLayer;0805R-100K;44.0690mm;38.2270mm;0;Resistor
+R1;100k;BottomLayer;0805R-100K;43.5610mm;59.0550mm;0;Resistor
+J3;HEADER-1X4;TopLayer;HEADER-1X4;81.5340mm;38.7350mm;0;Pin header right angle 90° male pitch 2,54mm
+J2;pH;TopLayer;BNC_RA_CON;35.6970mm;33.3810mm;0;BNC Elbow Connector
+J1;Orp;TopLayer;BNC_RA_CON;35.6970mm;63.3930mm;0;BNC Elbow Connector
+C15;220nF;BottomLayer;0805C-GENERIC;43.3070mm;45.0850mm;0;Capacitor
+C14;220nF;BottomLayer;0805C-GENERIC;43.3070mm;51.8160mm;180;Capacitor
+C13;10uF;TopLayer;0805C-GENERIC;81.1530mm;52.0700mm;90;Capacitor
+C12;100nF;TopLayer;0805C-GENERIC;78.8670mm;52.0700mm;90;Capacitor
+C11;100nF;TopLayer;0805C-GENERIC;65.1510mm;52.4510mm;90;Capacitor
+C10;10uF;TopLayer;0805C-GENERIC;62.9920mm;52.4510mm;90;Capacitor
+C9;100nF;TopLayer;0805C-GENERIC;54.2290mm;43.1800mm;0;Capacitor
+C8;22nF;BottomLayer;0805C-GENERIC;49.2760mm;41.9100mm;270;Capacitor
+C7;22nF;BottomLayer;0805C-GENERIC;47.1170mm;41.9100mm;90;Capacitor
+C6;22nF;BottomLayer;0805C-GENERIC;47.1170mm;55.1180mm;270;Capacitor
+C5;22nF;BottomLayer;0805C-GENERIC;49.2760mm;55.1180mm;90;Capacitor
+C4;100nF;BottomLayer;0805C-GENERIC;54.9910mm;37.4650mm;90;Capacitor
+C3;100nF;BottomLayer;0805C-GENERIC;54.9910mm;58.0390mm;270;Capacitor
+C2;100nF;TopLayer;0805C-GENERIC;52.8320mm;29.8450mm;90;Capacitor
+C1;100nF;TopLayer;0805C-GENERIC;52.5780mm;59.8170mm;90;Capacitor
