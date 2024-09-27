@@ -2,7 +2,11 @@
   NEXTION TFT related code, based on EasyNextion library by Seithan / Athanasios Seitanis (https://github.com/Seithan/EasyNextionLibrary)
   The trigger(s) functions at the end are called by the Nextion library on event (buttons, page change).
 
-  Completely reworked and simplified.
+  Completely reworked and simplified. These functions only update Nextion variables. The display is then updated localy by the
+  Nextion itself.
+
+  Remove every usages of String in order to avoid duplication, fragmentation and random crashes.
+  Note usage of snprintf_P which uses a fmt string that resides in program memory.
 */
 
 #include <Arduino.h>
@@ -13,7 +17,7 @@
 static volatile int CurrentPage = 0;
 static volatile bool TFT_ON = true;           // display status
 
-static String temp;
+static char temp[32];
 static unsigned long LastAction = 0; // Last action time done on TFT. Go to sleep after TFT_SLEEP
 static char HourBuffer[9];
 
@@ -61,14 +65,14 @@ void InitTFT()
 
 void UpdateWiFi(bool wifi){
   if(wifi){
-    temp = "WiFi: " + WiFi.SSID();
-    myNex.writeStr("page3.vaSSID.txt",temp);
-    temp = "IP: " + WiFi.localIP().toString();
-    myNex.writeStr("page3.vaIP.txt",temp);
+    snprintf_P(temp,sizeof(temp),PSTR("WiFi: %s"),WiFi.SSID().c_str());
+    myNex.writeStr(F("page3.vaSSID.txt"),temp);
+    snprintf_P(temp,sizeof(temp),PSTR("IP: %s"),WiFi.localIP().toString());
+    myNex.writeStr(F("page3.vaIP.txt"),temp);
   } else
   {
-    myNex.writeStr("page3.vaSSID.txt","Not connected");
-    myNex.writeStr("page3.vaIP.txt","");
+    myNex.writeStr(F("page3.vaSSID.txt"),"Not connected");
+    myNex.writeStr(F("page3.vaIP.txt"),"");
   } 
 }
 
@@ -84,11 +88,11 @@ void UpdateTFT()
   // Updates done only if TFT ON, useless (and not taken into account) if not
   if(TFT_ON)
   {
-    sprintf(HourBuffer, "%02d:%02d:%02d", hour(), minute(), second());
-    myNex.writeStr("page0.vaTime.txt",HourBuffer);
-    myNex.writeNum("page0.vaNetW.val",MQTTConnection ? 1:0);
-    temp = String(storage.FiltrationStart) + F("/") + String(storage.FiltrationStop) + F("h");
-    myNex.writeStr(F("page0.vaStaSto.txt"), temp);
+    sprintf(HourBuffer, PSTR("%02d:%02d:%02d"), hour(), minute(), second());
+    myNex.writeStr(F("page0.vaTime.txt"),HourBuffer);
+    myNex.writeNum(F("page0.vaNetW.val"),MQTTConnection ? 1:0);
+    snprintf_P(temp,sizeof(temp),PSTR("%02d/%02dh"),storage.FiltrationStart,storage.FiltrationStop);
+    myNex.writeStr(F("page0.vaStaSto.txt"),temp);
     if(TFT_Automode != storage.AutoMode) 
     { myNex.writeNum(F("page0.vaMode.val"),storage.AutoMode);
       TFT_Automode = storage.AutoMode;}
@@ -103,39 +107,41 @@ void UpdateTFT()
 
     if(CurrentPage==0)
     {
-      myNex.writeStr(F("page0.vapH.txt"), String(storage.PhValue, 2));
-      myNex.writeStr(F("page0.vaOrp.txt"), String(storage.OrpValue, 0));
-      temp = "(" + String(storage.Ph_SetPoint, 1) + ")";
-      myNex.writeStr(F("page0.vapHSP.txt"), temp);
-      temp = "(" + String((int)storage.Orp_SetPoint) + ")";
-      myNex.writeStr(F("page0.vaOrpSP.txt"), temp);
-      temp = (PhPID.GetMode() == 1) ? F("PID") : F("---");      
-      myNex.writeStr(F("page0.vapHPID.txt"), temp);
-      temp = (OrpPID.GetMode() == 1) ? F("PID") : F("---");
-      myNex.writeStr(F("page0.vaOrpPID.txt"), temp);
-      temp = String(storage.TempValue, 1) + (char)176 + F("C");
-      myNex.writeStr(F("page0.vaWT.txt"), temp);
-      temp = String(storage.TempExternal, 1) + (char)176 + F("C");
-      myNex.writeStr(F("page0.vaAT.txt"), temp);
-      temp = String(storage.PSIValue, 2) + F("b");
-      myNex.writeStr(F("page0.vaPSI.txt"), temp);
-      temp = String((int)round(PhPump.GetTankFill())) + (char)37 + F(" / ") + String(float(PhPump.UpTime)/1000./60., 1) + F("min");
-      myNex.writeStr(F("page0.vapHTk.txt"), temp);
-      temp = String((int)round(ChlPump.GetTankFill())) + (char)37 + F(" / ") + String(float(ChlPump.UpTime)/1000./60., 1) + F("min");
-      myNex.writeStr(F("page0.vaChlTk.txt"), temp);
+      snprintf_P(temp,sizeof(temp),PSTR("%4.2f"),storage.PhValue);      
+      myNex.writeStr(F("page0.vapH.txt"),temp);
+      snprintf_P(temp,sizeof(temp),PSTR("%3.0f"),storage.OrpValue);      
+      myNex.writeStr(F("page0.vaOrp.txt"),temp);
+      snprintf_P(temp,sizeof(temp),PSTR("(%3.1f)"),storage.Ph_SetPoint);
+      myNex.writeStr(F("page0.vapHSP.txt"),temp);
+      snprintf_P(temp,sizeof(temp),PSTR("(%3.0f)"),storage.Orp_SetPoint);      
+      myNex.writeStr(F("page0.vaOrpSP.txt"),temp);
+      snprintf_P(temp,sizeof(temp),PSTR("%s"),(PhPID.GetMode() == 1) ? PSTR("PID") : PSTR("---"));            
+      myNex.writeStr(F("page0.vapHPID.txt"),temp);
+      snprintf_P(temp,sizeof(temp),PSTR("%s"),(OrpPID.GetMode() == 1) ? PSTR("PID") : PSTR("---"));               
+      myNex.writeStr(F("page0.vaOrpPID.txt"),temp);
+      snprintf_P(temp,sizeof(temp),PSTR("%4.1f°C"),storage.TempValue); 
+      myNex.writeStr(F("page0.vaWT.txt"),temp);
+      snprintf_P(temp,sizeof(temp),PSTR("%4.1f°C"),storage.TempExternal);      
+      myNex.writeStr(F("page0.vaAT.txt"),temp);
+      snprintf_P(temp,sizeof(temp),PSTR("%4.2fb"),storage.PSIValue);   
+      myNex.writeStr(F("page0.vaPSI.txt"),temp);
+      snprintf_P(temp,sizeof(temp),PSTR("%d%% / %4.1fmin"),(int)round(PhPump.GetTankFill()),float(PhPump.UpTime)/1000./60.);
+      myNex.writeStr(F("page0.vapHTk.txt"),temp);
+      snprintf_P(temp,sizeof(temp),PSTR("%d%% / %4.1fmin"),(int)round(ChlPump.GetTankFill()),float(ChlPump.UpTime)/1000./60.);        
+      myNex.writeStr(F("page0.vaChlTk.txt"),temp);
 
       if(abs(storage.PhValue-storage.Ph_SetPoint) <= 0.1) 
-        myNex.writeNum("page0.vapHErr.val",0);
+        myNex.writeNum(F("page0.vapHErr.val"),0);
       if(abs(storage.PhValue-storage.Ph_SetPoint) > 0.1 && abs(storage.PhValue-storage.Ph_SetPoint) <= 0.2)  
-        myNex.writeNum("page0.vapHErr.val",1);
+        myNex.writeNum(F("page0.vapHErr.val"),1);
       if(abs(storage.PhValue-storage.Ph_SetPoint) > 0.2)  
-        myNex.writeNum("page0.vapHErr.val",2);
+        myNex.writeNum(F("page0.vapHErr.val"),2);
       if(abs(storage.OrpValue-storage.Orp_SetPoint) <= 20.) 
-        myNex.writeNum("page0.vaOrpErr.val",0);
+        myNex.writeNum(F("page0.vaOrpErr.val"),0);
       if(abs(storage.OrpValue-storage.Orp_SetPoint) > 20. && abs(storage.OrpValue-storage.Orp_SetPoint) <= 40.)  
-        myNex.writeNum("page0.vaOrpErr.val",1);
+        myNex.writeNum(F("page0.vaOrpErr.val"),1);
       if(abs(storage.OrpValue-storage.Orp_SetPoint) > 40.)  
-        myNex.writeNum("page0.vaOrpErr.val",2);        
+        myNex.writeNum(F("page0.vaOrpErr.val"),2);        
     }
 
     if(CurrentPage == 1)
@@ -155,8 +161,10 @@ void UpdateTFT()
     } 
 
     if(CurrentPage == 2) {
-      myNex.writeStr(F("page0.vapH.txt"), String(storage.PhValue, 2));
-      myNex.writeStr(F("page0.vaOrp.txt"), String(storage.OrpValue, 0));
+      snprintf_P(temp,sizeof(temp),PSTR("(%4.2f)"),storage.PhValue); 
+      myNex.writeStr(F("page0.vapH.txt"),temp);
+      snprintf_P(temp,sizeof(temp),PSTR("(%3.0f)"),storage.OrpValue);       
+      myNex.writeStr(F("page0.vaOrp.txt"),temp);
     }       
 
     if(CurrentPage == 3) 
@@ -168,9 +176,9 @@ void UpdateTFT()
     //put TFT in sleep mode with wake up on touch and force page 0 load to trigger an event
     if((unsigned long)(millis() - LastAction) >= TFT_SLEEP && TFT_ON && CurrentPage !=2)
     {
-      myNex.writeStr("thup=1");
-      myNex.writeStr("wup=0");
-      myNex.writeStr("sleep=1");
+      myNex.writeStr(F("thup=1"));
+      myNex.writeStr(F("wup=0"));
+      myNex.writeStr(F("sleep=1"));
       TFT_ON = false;
     }
   }  

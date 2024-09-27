@@ -83,36 +83,37 @@ void PoolMaster(void *pvParameters)
     FiltrationPump.loop();
     PhPump.loop();
     ChlPump.loop();
-    RobotPump.loop();  
+    RobotPump.loop();
 
     //reset time counters at midnight and send sync request to time server
     if (hour() == 0 && !DoneForTheDay)
     {
-        //First store current Chl and Acid consumptions of the day in Eeprom
-        storage.AcidFill = PhPump.GetTankFill();
-        storage.ChlFill = ChlPump.GetTankFill();
-        saveParam("AcidFill", storage.AcidFill);
-        saveParam("ChlFill", storage.ChlFill);
+      //First store current Chl and Acid consumptions of the day in NVS
+      // Restart if WiFi not connected for a while
+      storage.AcidFill = PhPump.GetTankFill();
+      storage.ChlFill = ChlPump.GetTankFill();
+      saveParam("AcidFill", storage.AcidFill);
+      saveParam("ChlFill", storage.ChlFill);
+      FiltrationPump.ResetUpTime();
+      PhPump.ResetUpTime();
+      PhPump.SetTankFill(storage.AcidFill);
+      ChlPump.ResetUpTime();
+      ChlPump.SetTankFill(storage.ChlFill);
+      RobotPump.ResetUpTime();
+      EmergencyStopFiltPump = false;
+      d_calc = false;
+      DoneForTheDay = true;
+      cleaning_done = false;
+      readLocalTime();
+      setTime(timeinfo.tm_hour,timeinfo.tm_min,timeinfo.tm_sec,timeinfo.tm_mday,timeinfo.tm_mon+1,timeinfo.tm_year-100);
 
-        FiltrationPump.ResetUpTime();
-        PhPump.ResetUpTime();
-        PhPump.SetTankFill(storage.AcidFill);
-        ChlPump.ResetUpTime();
-        ChlPump.SetTankFill(storage.ChlFill);
-        RobotPump.ResetUpTime();
-
-        EmergencyStopFiltPump = false;
-        d_calc = false;
-        DoneForTheDay = true;
-        cleaning_done = false;
-
-        readLocalTime();
-        setTime(timeinfo.tm_hour,timeinfo.tm_min,timeinfo.tm_sec,timeinfo.tm_mday,timeinfo.tm_mon+1,timeinfo.tm_year-100);
+      // Security: if WiFi disconnected in spite of system auto-reconnect, try to restart once a day
+      if(WiFi.status() != WL_CONNECTED) esp_restart();
 
     }
     else if(hour() == 1)
     {
-        DoneForTheDay = false;
+      DoneForTheDay = false;
     }
 
     // Compute next Filtering duration and start/stop hours at 15:00 (to filter during the hotest period of the day)
@@ -227,7 +228,9 @@ void PoolMaster(void *pvParameters)
     UpdateTFT();
 
     //Send email if alarm(s) occured
+    #ifdef EMAIL_ALERT
     Send_Email();
+    #endif
 
     #ifdef CHRONO
     t_act = millis() - td;

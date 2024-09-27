@@ -1,5 +1,5 @@
 // Firmware revisions
-#define FIRMW "ESP-3.3"
+#define FIRMW "ESP-3.3b"
 #define TFT_FIRMW "TFT-2.0"						   
 
 #define DEBUG_LEVEL DBG_INFO     // Possible levels : NONE/ERROR/WARNING/INFO/DEBUG/VERBOSE
@@ -19,6 +19,7 @@
 #endif 
 
 // Mail parameters and credentials
+#define EMAIL_ALERT    // Comment this line to disable Email alerting
 #define SMTP_HOST "your smtp server"
 #define SMTP_PORT 587  // check the port number
 #define AUTHOR_EMAIL "your email address"
