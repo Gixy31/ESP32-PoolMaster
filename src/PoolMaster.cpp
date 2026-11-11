@@ -5,10 +5,6 @@
 #include "PoolMaster.h"
 #include <ESP_Mail_Client.h>
 
-SMTPSession smtp;
-Session_Config config;
-SMTP_Message message;
-
 // Functions prototypes
 
 void readLocalTime(void);
@@ -22,8 +18,6 @@ void mqttErrorPublish(const char*);
 void PublishSettings(void);
 void UpdateTFT(void);
 void stack_mon(UBaseType_t&);
-void smtpCallback(SMTP_Status);
-bool SMTP_Connect(void);
 void Send_Email(void);
 
 void PoolMaster(void *pvParameters)
@@ -32,26 +26,6 @@ void PoolMaster(void *pvParameters)
   bool d_calc = false;                            // Filtration duration computed
 
   static UBaseType_t hwm=0;                       // free stack size
-
-  MailClient.networkReconnect(true);
-  #ifndef SILENT_MODE
-    smtp.debug(1);
-  #endif
-  smtp.callback(smtpCallback);
-  config.server.host_name = SMTP_HOST;
-  config.server.port = SMTP_PORT;
-  config.login.email = AUTHOR_LOGIN;
-  config.login.password = AUTHOR_PASSWORD;
-  config.login.user_domain = "127.0.0.1";
-
-  message.sender.name = F("PoolMaster");
-  message.sender.email = AUTHOR_EMAIL;
-  message.subject = F("PoolMaster Event");
-  message.addRecipient(F("Home"), RECIPIENT_EMAIL);
-  message.text.charSet = "us-ascii";
-  message.text.transfer_encoding = Content_Transfer_Encoding::enc_7bit;
-  message.priority = esp_mail_smtp_priority_low;
-  message.response.notify = esp_mail_smtp_notify_success | esp_mail_smtp_notify_failure | esp_mail_smtp_notify_delay;
 
   while(!startTasks);
   vTaskDelay(DT3);                                // Scheduling offset 
@@ -106,10 +80,6 @@ void PoolMaster(void *pvParameters)
       cleaning_done = false;
       readLocalTime();
       setTime(timeinfo.tm_hour,timeinfo.tm_min,timeinfo.tm_sec,timeinfo.tm_mday,timeinfo.tm_mon+1,timeinfo.tm_year-100);
-
-      // Security: if WiFi disconnected in spite of system auto-reconnect, try to restart once a day
-      if(WiFi.status() != WL_CONNECTED) esp_restart();
-
     }
     else if(hour() == 1)
     {
@@ -216,7 +186,7 @@ void PoolMaster(void *pvParameters)
     }  
 
     // Over-pressure error
-    if (storage.PSIValue > storage.PSI_HighThreshold)
+    if (FiltrationPump.IsRunning() && storage.PSIValue > storage.PSI_HighThreshold)
     {
         FiltrationPump.Stop();
         PSIError = true;
@@ -227,9 +197,9 @@ void PoolMaster(void *pvParameters)
     //UPdate Nextion TFT
     UpdateTFT();
 
-    //Send email if alarm(s) occured
+    //Send email if alarm(s) occured and WiFi connected
     #ifdef EMAIL_ALERT
-    Send_Email();
+    if (WiFi.status() == WL_CONNECTED) Send_Email();
     #endif
 
     #ifdef CHRONO
@@ -291,125 +261,67 @@ void SetOrpPID(bool Enable)
   }
 }
 
-bool SMTP_Connect(){
-  Debug.print(DBG_DEBUG,"SMTP Connection starts");
-  if (!smtp.connect(&config)){
-    Debug.print(DBG_ERROR,"SMTP Connection error, Status Code: %d, Error Code: %d, Reason: %s", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
-    return false;
-  } else Debug.print(DBG_INFO,"SMTP Connected");
-  if (!smtp.isLoggedIn()) Debug.print(DBG_ERROR,"Not yet logged in.");
-  else{
-    if (smtp.isAuthenticated()) Debug.print(DBG_INFO,"SMTP Successfully logged in.");
-    else Debug.print(DBG_ERROR,"SMTP Connected with no Auth.");
-  }
-  return true;
-}
-
 void Send_Email(){
 
-    char texte[80];
-    static bool notif_sent[5] = {0,0,0,0,0};
+  static bool notif_sent[5] = {0,0,0,0,0};
+  struct __attribute__((packed)) MsgStruct {uint8_t Alert_ID;double Alert_Value;}; // Force padding to 9 bytes instead of 16
+  MsgStruct msg = {0,0.};
+ 
+// En cas d'erreur de connexion au serveur SMTP, on abandonne l'envoi de message d'alertes, ceci afin d'éviter de saturer
+// le serveur avec des tentatives de connexion qui aboutissent à un refus permanent.    
 
-    if(PSIError)
+  if(PSIError)
+  {
+    if(!notif_sent[0])
     {
-      if(!notif_sent[0])
-      {
-        sprintf(texte,"Water pressure alert: %4.2fbar",storage.PSIValue);
-        message.text.content = texte;
-        if(SMTP_Connect()){   
-          if(!MailClient.sendMail(&smtp, &message))
-            Debug.print(DBG_ERROR,"Error, Status Code: %d, Error Code: %d, Reason: %s", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());     
-          else notif_sent[0] = true;
-        }
-      }    
-    } else notif_sent[0] = false;
+      msg.Alert_ID = 0;
+      msg.Alert_Value = storage.PSIValue;
+      xQueueSendToBack(queueMails,&msg,0);
+      notif_sent[0] = true;
+    } 
+  } else notif_sent[0] = false;
 
-    if(!ChlPump.TankLevel())
+  if(!ChlPump.TankLevel())
+  {
+    if(!notif_sent[1])
     {
-      if(!notif_sent[1])
-      {
-        sprintf(texte,"Chlorine level LOW: %3.0f %",ChlPump.GetTankFill());
-        message.text.content = texte;
-        if(SMTP_Connect()){
-          if(!MailClient.sendMail(&smtp, &message))
-            Debug.print(DBG_ERROR,"Error, Status Code: %d, Error Code: %d, Reason: %s", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());    
-          else notif_sent[1] = true;
-        }  
-      }
-    } else notif_sent[1] = false;
-
-    if(!PhPump.TankLevel())
-    {
-      if(!notif_sent[2])
-      {
-        sprintf(texte,"Acid level LOW: %3.0f %",PhPump.GetTankFill());
-        message.text.content = texte;
-        if(SMTP_Connect()){ 
-          if(!MailClient.sendMail(&smtp, &message))
-            Debug.print(DBG_ERROR,"Error, Status Code: %d, Error Code: %d, Reason: %s", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());    
-          else notif_sent[2] = true;
-        }  
-      }
-
-    } else notif_sent[2] = false;
-
-    if(ChlPump.UpTimeError)
-    {
-      if(!notif_sent[3])
-      {
-        sprintf(texte,"Chlorine pump uptime: %2.0fmn",round(ChlPump.UpTime/60000.));
-        message.text.content = texte; 
-        if(SMTP_Connect()){       
-          if(!MailClient.sendMail(&smtp, &message))
-            Debug.print(DBG_ERROR,"Error, Status Code: %d, Error Code: %d, Reason: %s", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());    
-          else notif_sent[3] = true;
-        }  
-      }
-    } else notif_sent[3] = false;
-
-    if(PhPump.UpTimeError)
-    {
-      if(!notif_sent[4])
-      {
-        sprintf(texte,"Acid pump uptime: %2.0fmn",round(PhPump.UpTime/60000.));
-        message.text.content = texte;
-        if(SMTP_Connect()){
-          if(!MailClient.sendMail(&smtp, &message))
-            Debug.print(DBG_ERROR,"Error, Status Code: %d, Error Code: %d, Reason: %s", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());    
-          else notif_sent[4] = true;
-        }  
-      }
-    } else notif_sent[4] = false; 
-}
-
-/* Callback function to get the Email sending status */
-void smtpCallback(SMTP_Status status){
-  /* Print the current status */
-  Debug.print(DBG_INFO,"Email send status: %d",status.info());
-
-  /* Print the sending result */
-  if (status.success()){
-    Debug.print(DBG_INFO,"Message sent success: %d", status.completedCount());
-    Debug.print(DBG_INFO,"Message sent failed: %d", status.failedCount());
-
-    for (size_t i = 0; i < smtp.sendingResult.size(); i++)
-    {
-      /* Get the result item */
-      SMTP_Result result = smtp.sendingResult.getItem(i);
-
-      // In case, ESP32, ESP8266 and SAMD device, the timestamp get from result.timestamp should be valid if
-      // your device time was synched with NTP server.
-      // Other devices may show invalid timestamp as the device time was not set i.e. it will show Jan 1, 1970.
-      // You can call smtp.setSystemTime(xxx) to set device time manually. Where xxx is timestamp (seconds since Jan 1, 1970)
-      
-      Debug.print(DBG_INFO,"Message No: %d", i + 1);
-      Debug.print(DBG_INFO,"Status: %s", result.completed ? "success" : "failed");
-      Debug.print(DBG_INFO,"Date/Time: %s", MailClient.Time.getDateTimeString(result.timestamp, "%B %d, %Y %H:%M:%S").c_str());
-      Debug.print(DBG_INFO,"Recipient: %s", result.recipients.c_str());
-      Debug.print(DBG_INFO,"Subject: %s", result.subject.c_str());
+      msg.Alert_ID = 1;
+      msg.Alert_Value = ChlPump.GetTankFill();
+      xQueueSendToBack(queueMails,&msg,0);
+      notif_sent[1] = true; 
     }
+  } else notif_sent[1] = false;
 
-    // Clear sending result as the memory usage will grow up.
-    smtp.sendingResult.clear();
-  }
+  if(!PhPump.TankLevel())
+  {
+    if(!notif_sent[2])
+    {
+      msg.Alert_ID = 2;
+      msg.Alert_Value = PhPump.GetTankFill();
+      xQueueSendToBack(queueMails,&msg,0);
+      notif_sent[2] = true;
+    }
+  } else notif_sent[2] = false;
+
+  if(ChlPump.UpTimeError)
+  {
+    if(!notif_sent[3])
+    {
+      msg.Alert_ID = 3;
+      msg.Alert_Value = double(round(ChlPump.UpTime/60000.));
+      xQueueSendToBack(queueMails,&msg,0);
+      notif_sent[3] = true;  
+    }
+  } else notif_sent[3] = false;
+
+  if(PhPump.UpTimeError)
+  {
+    if(!notif_sent[4])
+    {
+      msg.Alert_ID = 4;
+      msg.Alert_Value = double(round(PhPump.UpTime/60000.));
+      xQueueSendToBack(queueMails,&msg,0);
+      notif_sent[4] = true;
+    }
+  } else notif_sent[4] = false; 
 }

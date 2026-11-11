@@ -218,7 +218,7 @@ void AnalogPoll(void *pvParameters)
         samples_PSI.add(psi_sensor_value);        // compute average of PSI from last 5 measurements
         storage.PSIValue = (samples_PSI.getAverage(5)*0.1875/1000.)*storage.PSICalibCoeffs0 + storage.PSICalibCoeffs1;
 
-        Debug.print(DBG_DEBUG,"pH: %5.0f - %4.2f - ORP: %5.0f - %3.0fmV - PSI: %5.0f - %4.2fBar\r",
+        Debug.print(DBG_VERBOSE,"pH: %5.0f - %4.2f - ORP: %5.0f - %3.0fmV - PSI: %5.0f - %4.2fBar\r",
             ph_sensor_value,storage.PhValue,orp_sensor_value,storage.OrpValue,psi_sensor_value,storage.PSIValue);
     }
     unlockI2C();
@@ -522,20 +522,20 @@ void getTemp(void *pvParameters)
     #endif 
 
     double temp = sensors_W.getTempC(DS18B20_W);
-    if (temp == NAN || temp == -127) {
+    if (isnan(temp) || temp == -127) {
       Debug.print(DBG_WARNING,"Error getting Water temperature");
     }  else storage.TempValue = temp;
     samples_WTemp.add(storage.TempValue);
     storage.TempValue = samples_WTemp.getAverage(5);
-    Debug.print(DBG_DEBUG,"DS18B20_W: %6.2f°C",storage.TempValue);
+    Debug.print(DBG_VERBOSE,"DS18B20_W: %6.2f°C",storage.TempValue);
 
     temp = sensors_A.getTempC(DS18B20_A);
-    if (temp == NAN || temp == -127) {
+    if (isnan(temp) || temp == -127) {
       Debug.print(DBG_WARNING,"Error getting Air temperature");
     }  else storage.TempExternal = temp;
     samples_ATemp.add(storage.TempExternal);
     storage.TempExternal = samples_ATemp.getAverage(5);
-    Debug.print(DBG_DEBUG,"DS18B20_A: %6.2f°C",storage.TempExternal);
+    Debug.print(DBG_VERBOSE,"DS18B20_A: %6.2f°C",storage.TempExternal);
 
     sensors_W.requestTemperatures();
     sensors_A.requestTemperatures();

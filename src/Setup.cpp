@@ -48,8 +48,8 @@ StoreStruct storage =
   12, 9, 21, 8, 22, 20,
   2700, 2700, 30000,
   1800000, 1800000, 0, 0,
-  7.3, 650.0, 1.8, 0.7, 10.0, 18.0, 3.0, 3.61078313, -3.88020422, -966.946396, 2526.88809, 1.31, -0.1,
-  2700000.0, 0.0, 0.0, 18000.0, 0.0, 0.0, 0.0, 0.0, 28.0, 7.3, 650., 1.3,
+  7.3, 650.0, 1.8, 0.7, 10.0, 18.0, 3.0, 3.53040943, -2.05183061, -1054.2247, 2712.61154, 1.31, .14,
+  2700000.0, 0.0, 0.0, 18000.0, 0.0, 0.0, 0.0, 0.0, 28.0, 7.3, 700., 1.3,
   50.0, 68.0, 20.0, 20.0, 1.5, 1.5
 };
 #endif
@@ -58,6 +58,7 @@ tm timeinfo;
 
 // Various global flags
 volatile bool startTasks = false;               // Signal to start loop tasks
+EventGroupHandle_t netEvents;
 
 bool AntiFreezeFiltering = false;               // Filtration anti freeze mode
 bool EmergencyStopFiltPump = false;             // flag will be (re)set by double-tapp button
@@ -66,6 +67,9 @@ bool cleaning_done = false;                     // daily cleaning done
 
 // Queue object to store incoming JSON commands (up to 10)
 QueueHandle_t queueIn;
+
+//Queue object to store alert mails requests
+QueueHandle_t queueMails;
 
 // NVS Non Volatile SRAM (eqv. EEPROM)
 Preferences nvs;      
@@ -101,9 +105,8 @@ void StartTime(void);
 void readLocalTime(void);
 bool loadConfig(void);
 bool saveConfig(void);
-void WiFiEvent(WiFiEvent_t);
-void initTimers(void);
-void connectToWiFi(void);
+void WiFiEvent(WiFiEvent_t,WiFiEventInfo_t);
+void wifiStart(void);
 void mqttInit(void);                     
 void InitTFT(void);
 void ResetTFT(void);
@@ -128,6 +131,8 @@ void ProcessCommand(void*);
 void SettingsPublish(void*);
 void MeasuresPublish(void*);
 void StatusLights(void*);
+void NetSupervisor(void*);
+void SendMails(void*);
 
 // Setup
 void setup()
@@ -199,28 +204,48 @@ void setup()
 
   // Initialize watch-dog
   esp_task_wdt_init(WDT_TIMEOUT, true);
+  // Get Core ID
+  int app_cpu = xPortGetCoreID();
 
   //Initialize MQTT
   mqttInit();
 
-  // Initialize WiFi events management (on connect/disconnect)
+  // Initialize WiFi events management (on connect/disconnect) and start WiFi
+  netEvents = xEventGroupCreate();
+  WiFi.setSleep(pdFALSE);
+  WiFi.setAutoReconnect(pdFALSE);
   WiFi.onEvent(WiFiEvent);
-  initTimers();
-  connectToWiFi();
+  wifiStart();
 
-  delay(500);    // let task start-up and wait for connection
-  while(WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+// Create NetSupervisor task which monitor WiFi and MQTT connections and reconnect if necessary  
+  xTaskCreatePinnedToCore(
+    NetSupervisor,
+    "NetSupervisor",
+    3072,
+    NULL,
+    1,
+    nullptr,
+    app_cpu
+  );
+
+  // After first start, wait for WiFi connection and NTP time. When restarting, system time is maintained so 
+  // no need to wait for time.
+  delay(500);                     // let task start-up and wait for connection
+  if (time(nullptr) < 1700000000) // invalid time (<2023)
+  {
+    while(WiFi.status() != WL_CONNECTED)   //  wait for WiFi connected with an IP address
+    {   
+      delay(500);
+      Serial.print(".");
+    }
+    // Config NTP, get time and set system time. This is done here in setup then every day at midnight
+    // note: in timeinfo struct, months are from 0 to 11 and years are from 1900. Thus the corrections
+    // to pass arguments to setTime which needs months from 1 to 12 and years from 2000...
+    // DST (Daylight Saving Time) is managed automatically
+    StartTime();
+    readLocalTime();
+    setTime(timeinfo.tm_hour,timeinfo.tm_min,timeinfo.tm_sec,timeinfo.tm_mday,timeinfo.tm_mon+1,timeinfo.tm_year-100);
   }
-
-  // Config NTP, get time and set system time. This is done here in setup then every day at midnight
-  // note: in timeinfo struct, months are from 0 to 11 and years are from 1900. Thus the corrections
-  // to pass arguments to setTime which needs months from 1 to 12 and years from 2000...
-  // DST (Daylight Saving Time) is managed automatically
-  StartTime();
-  readLocalTime();
-  setTime(timeinfo.tm_hour,timeinfo.tm_min,timeinfo.tm_sec,timeinfo.tm_mday,timeinfo.tm_mon+1,timeinfo.tm_year-100);
   Debug.print(DBG_INFO,"%d/%02d/%02d %02d:%02d:%02d",year(),month(),day(),hour(),minute(),second());
 
   // Initialize the mDNS library.
@@ -291,9 +316,11 @@ void setup()
   // Create queue for external commands
   queueIn = xQueueCreate((UBaseType_t)QUEUE_ITEMS_NBR,(UBaseType_t)QUEUE_ITEM_SIZE);
 
+  // Create queue for alert emails
+  queueMails = xQueueCreate((UBaseType_t)QUEUE_MAILS_NBR,(UBaseType_t)QUEUE_MAILS_SIZE);
+
   // Create loop tasks in the scheduler.
   //------------------------------------
-  int app_cpu = xPortGetCoreID();
 
   Debug.print(DBG_DEBUG,"Creating loop Tasks");
 
@@ -326,7 +353,7 @@ void setup()
   xTaskCreatePinnedToCore(
     PoolMaster,
     "PoolMaster",
-    5120,
+    3072,
     NULL,
     1,
     nullptr,
@@ -396,6 +423,17 @@ void setup()
     NULL,
     1,
     &pubSetTaskHandle,                // needed to notify task later
+    app_cpu
+  );
+
+  // Send Alert Mails
+  xTaskCreatePinnedToCore(
+    SendMails,
+    "SendMails",
+    8192,
+    NULL,
+    1,
+    nullptr,                
     app_cpu
   );
 
@@ -585,6 +623,7 @@ bool saveParam(const char* key, uint8_t val)
 {
   nvs.begin("PoolMaster",false);
   size_t i = nvs.putUChar(key,val);
+  nvs.end();
   return(i == sizeof(val));
 }
 
@@ -592,6 +631,7 @@ bool saveParam(const char* key, bool val)
 {
   nvs.begin("PoolMaster",false);
   size_t i = nvs.putBool(key,val);
+  nvs.end();
   return(i == sizeof(val));
 }
 
@@ -599,6 +639,7 @@ bool saveParam(const char* key, unsigned long val)
 {
   nvs.begin("PoolMaster",false);
   size_t i = nvs.putULong(key,val);
+  nvs.end();
   return(i == sizeof(val));
 }
 
@@ -606,6 +647,7 @@ bool saveParam(const char* key, double val)
 {
   nvs.begin("PoolMaster",false);
   size_t i = nvs.putDouble(key,val);
+  nvs.end();
   return(i == sizeof(val));
 }
 

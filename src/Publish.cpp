@@ -293,13 +293,15 @@ void MeasuresPublish(void *pvParameters)
     {
         //send a JSON to MQTT broker. /!\ Split JSON if longer than 100 bytes
         //Will publish something like {"AcidF":100,"ChlF":100,"IO":11,"IO2":0}
-        const int capacity = JSON_OBJECT_SIZE(4);
+        const int capacity = JSON_OBJECT_SIZE(6);
         StaticJsonDocument<capacity> root;
 
         root["AcidF"] = PhPump.GetTankFill();
         root["ChlF"]  = ChlPump.GetTankFill();
         root["IO"]    = BitMap1;
         root["IO2"]   = BitMap2;
+        root["Disc"]  = disconnectCount;
+        root["Reason"]= lastReason;
 
         PublishTopic(PoolTopicMeas2, root);
     }

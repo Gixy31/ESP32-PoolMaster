@@ -367,7 +367,7 @@ void ProcessCommand(void *pvParameters)
         else if (command.containsKey(F("ChlPumpFR")))//"ChlPumpFR" set flow rate of Chl pump
         {
           storage.ChlPumpFR = (double)command[F("ChlPumpFR")];
-          ChlPump.SetFlowRate((double)command[F("ChlpumpFR")]);
+          ChlPump.SetFlowRate((double)command[F("ChlPumpFR")]);
           saveParam("ChlPumpFR",storage.ChlPumpFR);
           PublishSettings();
         }

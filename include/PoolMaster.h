@@ -15,10 +15,8 @@
 #include <esp_task_wdt.h>         // ESP task management library
 #include <Preferences.h>          // Non Volatile Storage management (ESP)
 #include <WiFi.h>                 // ESP32 Wifi support
-#include <WiFiClient.h>           // Base class that provides Client
-#include <WiFiUdp.h>              // UDP support
 #include <ESPmDNS.h>              // mDNS
-#include <ArduinoOTA.h>           // Over the Air WiFi update 
+#include <ArduinoOTA.h>           // Over The Air WiFi update 
 #include "AsyncMqttClient.h"      // Async. MQTT client
 #include "ADS1115.h"              // ADS1115 sensors library
 
@@ -42,6 +40,11 @@ extern StoreStruct storage;
 #define QUEUE_ITEM_SIZE 100
 extern QueueHandle_t queueIn;
 
+//Queue object to store alert mails requests (up to 5)
+#define QUEUE_MAILS_NBR 5
+#define QUEUE_MAILS_SIZE 9
+extern QueueHandle_t queueMails;
+
 //The four pumps of the system (instanciate the Pump class)
 //In this case, all pumps start/Stop are managed by relays
 extern Pump FiltrationPump;
@@ -53,8 +56,6 @@ extern Pump RobotPump;
 //Specify the links and initial tuning parameters
 extern PID PhPID;
 extern PID OrpPID;
-
-extern bool PSIError;
 
 extern tm timeinfo;
 
@@ -68,5 +69,11 @@ extern volatile bool startTasks;                       // flag to start loop tas
 extern bool MQTTConnection;                            // MQTT connected flag
 extern bool EmergencyStopFiltPump;                     // Filtering pump stopped manually; needs to be cleared to restart
 extern bool AntiFreezeFiltering;                       // Filtration anti freeze mode
-extern bool PSIError;								   // Water pressure alarm
-extern bool cleaning_done;      					   // Robot clean-up done                        
+extern bool PSIError;                                  // Water pressure alarm
+extern bool cleaning_done;                             // Robot clean-up done  
+
+extern EventGroupHandle_t netEvents;
+#define NET_ASSOCIATED  BIT0      // associé au point d'accès (niveau 2)
+#define NET_HAS_IP      BIT1      // adresse IP obtenue (DHCP terminé)
+extern volatile uint8_t  lastReason;        // dernière cause de déconnexion
+extern volatile uint32_t disconnectCount;   // diagnostic, publiable sur MQTT

@@ -1,5 +1,5 @@
 // Firmware revisions
-#define FIRMW "ESP-3.3b"
+#define FIRMW "ESP-3.4"
 #define TFT_FIRMW "TFT-2.0"						   
 
 #define DEBUG_LEVEL DBG_INFO     // Possible levels : NONE/ERROR/WARNING/INFO/DEBUG/VERBOSE

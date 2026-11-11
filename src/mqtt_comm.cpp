@@ -1,4 +1,4 @@
-// MQTT related functions for PoolMaster, including WiFi functions
+// MQTT related functions for PoolMaster
 // Use JSON version 6
 
 #undef __STRICT_ANSI__
@@ -23,12 +23,8 @@ static const char* PoolTopicStatus    = POOLTOPIC"Status";
 static const char* PoolTopicError     = POOLTOPIC"Err";
 
 // Functions prototypes
-void initTimers(void);
 void mqttInit(void);
 void mqttErrorPublish(const char* );
-void connectToWiFi(void);
-void reconnectToWiFi();
-void connectToMqtt(void);
 void WiFiEvent(WiFiEvent_t );
 void onMqttConnect(bool);
 void onMqttDisconnect(AsyncMqttClientDisconnectReason);
@@ -36,13 +32,7 @@ void onMqttSubscribe(uint16_t, uint8_t);
 void onMqttUnSubscribe(uint16_t);
 void onMqttMessage(char* , char* , AsyncMqttClientMessageProperties , size_t , size_t , size_t );
 void onMqttPublish(uint16_t);
-void UpdateWiFi(bool);
 int  freeRam(void);
-
-void initTimers() {
-  mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
-  wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(reconnectToWiFi));
-}
 
 void mqttInit() {
   //Init Async MQTT
@@ -63,57 +53,13 @@ void mqttInit() {
 void mqttErrorPublish(const char* Payload){
   if (mqttClient.publish(PoolTopicError, 1, true, Payload) !=0)
   {
-    Debug.print(DBG_WARNING,"Payload: %s - Payload size: %d",Payload, sizeof(Payload));
+    Debug.print(DBG_WARNING,"Payload: %s - Payload size: %d",Payload, strlen(Payload));
   }
   else
   {
     Debug.print(DBG_WARNING,"Unable to publish the following payload: %s",Payload);
   }
 }    
-
-void connectToWiFi(){
-  Debug.print(DBG_INFO,"[WiFi] Connecting to WiFi...");
-  WiFi.mode(WIFI_STA);
-  WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
-  WiFi.setHostname(HOSTNAME); 
-  WiFi.begin(WIFI_NETWORK, WIFI_PASSWORD);
-}
-
-void reconnectToWiFi(){
-  if(WiFi.status() != WL_CONNECTED){
-    Debug.print(DBG_INFO,"[WiFi] Reconnecting to WiFi...");
-    WiFi.reconnect();
-  } else Debug.print(DBG_INFO,"[WiFi] Spurious disconnect event ignored");    
-}
-
-void connectToMqtt(){
-  Debug.print(DBG_INFO,"[WiFi] Connecting to MQTT...");
-  mqttClient.connect();
-}
-
-void WiFiEvent(WiFiEvent_t event){
-  switch(event){
-    case ARDUINO_EVENT_WIFI_STA_CONNECTED:
-      xTimerStop(wifiReconnectTimer,0);
-      Debug.print(DBG_INFO,"[WiFi] Connected to: %s",WiFi.SSID().c_str());
-      break;
-    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-      xTimerStop(wifiReconnectTimer,0);
-      Debug.print(DBG_INFO,"[WiFi] IP address: %s",WiFi.localIP().toString().c_str());
-      Debug.print(DBG_INFO,"[WiFi] Hostname: %s",WiFi.getHostname());
-      UpdateWiFi(true);
-      xTimerStart(mqttReconnectTimer,0);
-      break;
-    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-      Debug.print(DBG_WARNING,"[WiFi] Connection lost");
-      xTimerStop(mqttReconnectTimer,0);
-      xTimerStart(wifiReconnectTimer,0);
-      UpdateWiFi(false);
-      break;    
-    default:
-      break;  
-  }
-}
 
 // Once connected to MQTT broker, subscribe to the PoolTopicAPI topic in order to receive future commands
 // then publish the "online" message on the "status" topic. If Ethernet connection is ever lost
@@ -127,7 +73,6 @@ void onMqttConnect(bool sessionPresent){
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason){
   Debug.print(DBG_WARNING,"Disconnected from MQTT");
-  if(WiFi.isConnected()) xTimerStart(mqttReconnectTimer,0);
   MQTTConnection = false;
 }
 
@@ -151,19 +96,21 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
   //Pool commands. This check might be redundant since we only subscribed to this topic
   if (strcmp(topic,PoolTopicAPI)==0)
   {
-    char Command[100] = "";
+    char Command[QUEUE_ITEM_SIZE] = "";
 
-    for (uint8_t i=0 ; i<len ; i++){
-      Command[i] = payload[i];
-    }
-    if (xQueueSendToBack(queueIn, &Command, 0) == pdPASS)
-    {
-      Debug.print(DBG_INFO,"Command added to queue: %s",Command);
-    }
-    else
-    {
-      Debug.print(DBG_ERROR,"Queue full, command: %s not added", Command);
-    }
+    if(len < QUEUE_ITEM_SIZE) {  
+      for (uint8_t i=0 ; i<len ; i++){
+        Command[i] = payload[i];
+      }
+      if (xQueueSendToBack(queueIn, &Command, 0) == pdPASS)
+      {
+        Debug.print(DBG_INFO,"Command added to queue: %s",Command);
+      }
+      else
+      {
+        Debug.print(DBG_ERROR,"Queue full, command: %s not added", Command);
+      }
+    } else Debug.print(DBG_ERROR,"Command too long (%d) not added : %s", Command, len);
     Debug.print(DBG_DEBUG,"FreeRam: %d Queued messages: %d",freeRam(),uxQueueMessagesWaiting(queueIn));
   }
 }

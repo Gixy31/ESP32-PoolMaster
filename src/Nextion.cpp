@@ -67,7 +67,7 @@ void UpdateWiFi(bool wifi){
   if(wifi){
     snprintf_P(temp,sizeof(temp),PSTR("WiFi: %s"),WiFi.SSID().c_str());
     myNex.writeStr(F("page3.vaSSID.txt"),temp);
-    snprintf_P(temp,sizeof(temp),PSTR("IP: %s"),WiFi.localIP().toString());
+    snprintf_P(temp,sizeof(temp),PSTR("IP: %s"),WiFi.localIP().toString().c_str());
     myNex.writeStr(F("page3.vaIP.txt"),temp);
   } else
   {
@@ -167,12 +167,6 @@ void UpdateTFT()
       myNex.writeStr(F("page0.vaOrp.txt"),temp);
     }       
 
-    if(CurrentPage == 3) 
-    {  UpdateWiFi(WiFi.status() == WL_CONNECTED);
-      myNex.writeStr(F("page3.vaMCFW.txt"),FIRMW);
-      myNex.writeStr(F("page3.vaTFTFW.txt"),TFT_FIRMW);
-    }  
-
     //put TFT in sleep mode with wake up on touch and force page 0 load to trigger an event
     if((unsigned long)(millis() - LastAction) >= TFT_SLEEP && TFT_ON && CurrentPage !=2)
     {
@@ -189,11 +183,7 @@ void UpdateTFT()
 void trigger1()
 {
   CurrentPage = 0;
-  if(!TFT_ON)
-  {
-    UpdateWiFi(WiFi.status() == WL_CONNECTED);
-    TFT_ON = true;  
-  }
+  if(!TFT_ON) TFT_ON = true;  
   LastAction = millis();
 }
 
@@ -218,6 +208,9 @@ void trigger3()
 void trigger4()
 {
   CurrentPage = 3;
+  UpdateWiFi(WiFi.status() == WL_CONNECTED);
+  myNex.writeStr(F("page3.vaMCFW.txt"),FIRMW);
+  myNex.writeStr(F("page3.vaTFTFW.txt"),TFT_FIRMW);
   LastAction = millis();
 }
 
@@ -225,7 +218,7 @@ void trigger4()
 //printh 23 02 54 05
 void trigger5()
 {
-  char Cmd[100] = "{\"Mode\":1}";
+  char Cmd[QUEUE_ITEM_SIZE] = "{\"Mode\":1}";
   if(storage.AutoMode) Cmd[8] = '0';
   xQueueSendToBack(queueIn,&Cmd,0);
   LastAction = millis();
@@ -235,7 +228,7 @@ void trigger5()
 //printh 23 02 54 06
 void trigger6()
 {
-  char Cmd[100] = "{\"FiltPump\":1}";
+  char Cmd[QUEUE_ITEM_SIZE] = "{\"FiltPump\":1}";
   if(FiltrationPump.IsRunning()) Cmd[12] = '0';
   else TFT_Filt = true;
   xQueueSendToBack(queueIn,&Cmd,0);
@@ -246,7 +239,7 @@ void trigger6()
 //printh 23 02 54 07
 void trigger7()
 {
-  char Cmd[100] = "{\"RobotPump\":1}";
+  char Cmd[QUEUE_ITEM_SIZE] = "{\"RobotPump\":1}";
   if(RobotPump.IsRunning()) Cmd[13] = '0';
   else TFT_Robot = true;
   xQueueSendToBack(queueIn,&Cmd,0);
@@ -257,7 +250,7 @@ void trigger7()
 //printh 23 02 54 08
 void trigger8()
 {
-  char Cmd[100] = "{\"Relay\":[0,0]}";
+  char Cmd[QUEUE_ITEM_SIZE] = "{\"Relay\":[0,0]}";
   if(digitalRead(RELAY_R0)) Cmd[12] = '1';
   xQueueSendToBack(queueIn,&Cmd,0);
   LastAction = millis();
@@ -267,7 +260,7 @@ void trigger8()
 //printh 23 02 54 09
 void trigger9()
 {
-  char Cmd[100] = "{\"Relay\":[1,0]}";
+  char Cmd[QUEUE_ITEM_SIZE] = "{\"Relay\":[1,0]}";
   if(digitalRead(RELAY_R1)) Cmd[12] = '1';
   xQueueSendToBack(queueIn,&Cmd,0);
   LastAction = millis();
@@ -277,7 +270,7 @@ void trigger9()
 //printh 23 02 54 0A
 void trigger10()
 {
-  char Cmd[100] = "{\"Winter\":1}";
+  char Cmd[QUEUE_ITEM_SIZE] = "{\"Winter\":1}";
   if(storage.WinterMode) Cmd[10] = '0';
   else TFT_Winter = true;
   xQueueSendToBack(queueIn,&Cmd,0);
@@ -288,8 +281,9 @@ void trigger10()
 //printh 23 02 54 0B
 void trigger11()
 {
-  char Cmd[100] = "";
+  char Cmd[QUEUE_ITEM_SIZE] = "";
   strcpy(Cmd,myNex.readStr(F("pageCalibs.vaCommand.txt")).c_str());
+  snprintf(Cmd,sizeof(Cmd),"%s",myNex.readStr(F("pageCalibs.vaCommand.txt")).c_str());
   xQueueSendToBack(queueIn,&Cmd,0);
   Debug.print(DBG_VERBOSE,"Nextion cal page command: %s",Cmd);
   LastAction = millis();
@@ -299,7 +293,7 @@ void trigger11()
 //printh 23 02 54 0C
 void trigger12()
 {
-  char Cmd[100] = "{\"Clear\":1}";
+  char Cmd[QUEUE_ITEM_SIZE] = "{\"Clear\":1}";
   xQueueSendToBack(queueIn,&Cmd,0);
   LastAction = millis();
 }
@@ -308,7 +302,7 @@ void trigger12()
 //printh 23 02 54 0D
 void trigger13()
 {
-  char Cmd[100] = "{\"PhPID\":1}";
+  char Cmd[QUEUE_ITEM_SIZE] = "{\"PhPID\":1}";
   if(PhPID.GetMode() == 1) Cmd[9] = '0';
   xQueueSendToBack(queueIn,&Cmd,0);
   LastAction = millis();
@@ -318,7 +312,7 @@ void trigger13()
 //printh 23 02 54 0E
 void trigger14()
 {
-  char Cmd[100] = "{\"OrpPID\":1}";
+  char Cmd[QUEUE_ITEM_SIZE] = "{\"OrpPID\":1}";
   if(OrpPID.GetMode() == 1) Cmd[10] = '0';
   xQueueSendToBack(queueIn,&Cmd,0);
   LastAction = millis();
